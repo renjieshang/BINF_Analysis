@@ -1,0 +1,152 @@
+library(biomaRt)
+library(stringr)
+deseq_res$Row.names = unlist(str_split(deseq_res$Row.names,"[.]",simplify=T))[,1]
+genes <- c(deseq_res$Row.names)
+ensembl <- useMart('ensembl', dataset = 'mmusculus_gene_ensembl')
+annot <- getBM(
+attributes = c(
+'mgi_symbol',
+'external_gene_name',
+'ensembl_gene_id',
+'entrezgene_id',
+'gene_biotype'),
+filters = 'ensembl_gene_id',
+values = genes,
+mart = ensembl)
+annot <- merge(
+x = as.data.frame(genes),
+y =  annot,
+by.y = 'ensembl_gene_id',
+all.x = T,
+by.x = 'genes')
+annot
+id <- match(deseq_res$Row.names , annot$genes)
+deseq_res$Symbol <- annot$external_gene_name[id]
+View(deseq_res)
+write.table(deseq_res, file="Mouse_DE_featureCounts.csv",sep = ",", col.names = T, row.names = F)
+
+##id transform is done, now make some plots:
+
+rld <- rlog(dds, blind=TRUE)
+DESeq2::plotPCA(rld)
+rld_mat <- assay(rld)
+rld_cor <- cor(rld_mat)
+library(pheatmap)
+pheatmap(rld_cor)
+BiocManager::install('EnhancedVolcano')
+library(EnhancedVolcano)
+EnhancedVolcano(res,
+lab = deseq_res$Symbol,
+x = 'log2FoldChange',
+y = 'pvalue')
+res_de_up <- subset(deseq_res, deseq_res$log2FoldChange>=1)
+res_de_dw <- subset(deseq_res, deseq_res$log2FoldChange<=(-1)*1)
+res_de_up_top30_id <- as.vector(head(res_de_up$Symbol,30))
+res_de_dw_top30_id <- as.vector(head(res_de_dw$Symbol,30))
+red_de_top60 <- c(res_de_up_top30_id, res_de_dw_top30_id)
+write.table(as.data.frame(red_de_top60),file = "mouse_Top60.txt", row.names = F, col.names = F )
+
+##To do GO analysis, need ensemble gene id transform to entrezID:
+
+View(deseq_res)
+library(dplyr)
+padj_cutoff <- 0.05
+sig_res <- dplyr::filter(deseq_res, padj < padj_cutoff) %>% dplyr::arrange(padj)
+View(sig_res)
+top20_sig_genes <- sig_res %>%
+dplyr::arrange(padj) %>%
+head(n=20)
+View(top20_sig_genes)
+library(biomaRt)
+mart=mart)
+genes <- getBM(
+filters="ensembl_gene_id",
+attributes = c("ensembl_gene_id", "entrezgene_id"),
+values=sig_res$Row.names,
+mart=mart)
+View(genes)
+View(sig_res)
+id <- match(sig_res$Row.names , genes$ensembl_gene_id)
+sig_res$entrezID <- genes$entrezgene_id[id]
+library(clusterProfiler)
+library("org.Mm.eg.db")
+library(TxDb.Mmusculus.UCSC.mm10.knownGene)
+ego <- enrichGO(gene = sig_res$entrezID,
+keyType = "ENTREZID",
+OrgDb = org.Mm.eg.db,
+ont = "BP",
+pAdjustMethod = "BH",
+qvalueCutoff = 0.05,
+readable = TRUE)
+dotplot(ego, showCategory=50)
+savehistory("~/Desktop/DataAnalysis/RNA-seq/featureCount/Mouse/GO.Rhistory")
+saveimage...
+
+##Human part:
+setwd("~/Desktop/Data Analysis/RNA-seq/featureCount/GMvsDM7day")
+library(DESeq2)
+countData <- as.matrix(read.csv("GMvsDM7day_featurecounts_goodformat.csv", row.names="Geneid"))
+condition <- factor(c("GM","GM","DM7day","DM7day"))
+coldata <- data.frame(row.names = colnames(countData), condition)
+coldata
+condition
+dds<-DESeqDataSetFromMatrix(countData,coldata,design = ~condition)
+head(dds)
+dds<-DESeq(dds)
+resultsNames(dds)
+res<-results(dds)
+summary(res)
+res <- res[order(res$padj),]
+summary(res)
+resdata <- merge(as.data.frame(res),as.data.frame(counts(dds,normalize=TRUE)),by="row.names",sort=FALSE)
+View(resdata)
+deseq_res<-data.frame(resdata)
+library(biomaRt)
+library(stringr)
+deseq_res$Row.names = unlist(str_split(deseq_res$Row.names,"[.]",simplify=T))[,1]
+genes <- c(deseq_res$Row.names)
+ensembl <- useMart('ensembl', dataset = 'hsapiens_gene_ensembl')
+annot <- getBM(
+attributes = c(
+'external_gene_name',
+'ensembl_gene_id',
+'entrezgene_id',
+'gene_biotype'),
+filters = 'ensembl_gene_id',
+values = genes,
+mart = ensembl)
+annot <- merge(
+x = as.data.frame(genes),
+y =  annot,
+by.y = 'ensembl_gene_id',
+all.x = T,
+by.x = 'genes')
+annot
+id <- match(deseq_res$Row.names , annot$genes)
+deseq_res$Symbol <- annot$external_gene_name[id]
+View(deseq_res)
+write.table(deseq_res, file="GMvsDM7day_DE_featureCounts.csv",sep = ",", col.names = T, row.names = F)
+rld <- rlog(dds, blind=TRUE)
+DESeq2::plotPCA(rld)
+library(ggplot2)
+DESeq2::plotPCA(rld)
+DESeq2::plotPCA(rld, ntop = 500)
+DESeq2::plotPCA(rld, ntop = 5000)
+DESeq2::plotPCA(rld, ntop = 10000)
+rld_mat <- assay(rld)
+rld_cor <- cor(rld_mat)
+library(pheatmap)
+pheatmap(rld_cor)
+library(EnhancedVolcano)
+EnhancedVolcano(res,
+lab = deseq_res$Symbol,
+x = 'log2FoldChange',
+y = 'pvalue')
+res_de_up <- subset(deseq_res, deseq_res$log2FoldChange>=1)
+res_de_dw <- subset(deseq_res, deseq_res$log2FoldChange<=(-1)*1)
+res_de_up_top30_id <- as.vector(head(res_de_up$Symbol,30))
+res_de_dw_top30_id <- as.vector(head(res_de_dw$Symbol,30))
+red_de_top60 <- c(res_de_up_top30_id, res_de_dw_top30_id)
+write.table(as.data.frame(red_de_top60),file = "GMvsDM7day_Top60.txt", row.names = F, col.names = F )
+save.image("GMvsDM7day.Rdata")
+savehistory("~/Desktop/Data Analysis/RNA-seq/featureCount/GMvsDM7day/Bestcode.Rhistory")
