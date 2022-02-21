@@ -1,0 +1,44 @@
+##Now use featureCounts to get raw reads count from sorted.bam, use mouse data as example:
+
+#!/bin/bash
+#SBATCH --job-name=Mousefeaturecounts
+#SBATCH --mail-type=ALL
+#SBATCH --mail-user=renjieshang@uga.edu
+#SBATCH --ntasks=4
+#SBATCH --partition=highmem_p
+#SBATCH --cpus-per-task=4
+#SBATCH --mem=60gb
+#SBATCH --time=12:00:00
+#SBATCH --output=Mousefeaturecounts.%j.out
+#SBATCH --error=Mousefeaturecounts.%j.err
+cd $SLURM_SUBMIT_DIR
+
+ml Subread/2.0.1-GCC-8.3.0
+
+featureCounts -p -T 16 -t exon -g gene_id -a /lustre2/scratch/rs14482/workDir/BiLabRNAseq/Annotation/gencode.vM25.annotation_GRCm38.p6.gff3 -o M_featurecounts.txt \
+9.sorted.bam 10.sorted.bam 11.sorted.bam 12.sorted.bam 13.sorted.bam
+
+##For generated .txt file, remove header and location columns, only keep Geneid and bams with counts, new file is named M/H_featurecounts_goodformat.csv
+##Use DESeq2...R packages to get DE genes, ID transform, vocanolplot, GO;
+
+##Mouse part:
+
+library(DESeq2)
+countData <- as.matrix(read.csv("M_featurecounts_goodformat.csv", row.names="Geneid"))
+condition <- factor(c("WT","WT","KO","KO","WT"))
+coldata <- data.frame(row.names = colnames(countData), condition)
+coldata
+condition
+dds<-DESeqDataSetFromMatrix(countData,coldata,design = ~condition)
+head(dds)
+dds<-DESeq(dds)
+resultsNames(dds)
+res<-results(dds)
+summary(res)
+res <- res[order(res$padj),]
+summary(res)
+resdata <- merge(as.data.frame(res),as.data.frame(counts(dds,normalize=TRUE)),by="row.names",sort=FALSE)
+View(resdata)
+deseq_res<-data.frame(resdata)
+
+##DE is done, now do gene id transform to get gene Symbol:
