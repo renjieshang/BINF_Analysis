@@ -1,0 +1,25 @@
+#According to metadata delete cells and add new metadata
+> anno <- read.table("skm.anno.tsv",head = FALSE)$V1
+> anno_vector <- as.character(anno)
+> testbarcode <- subset(Merge, cells = anno_vector)
+> annoskm <- read.table("skm.anno.tsv",header = FALSE)$V2
+> testbarcode <- AddMetaData(testbarcode,metadata = annoskm, col.name = "skm.anno")
+> View(testbarcode@meta.data)
+
+#Mannually define vlnplot x axis sample order
+object_copy <- object
+my_levels <- c(set_custom_order_of_clusters)
+Idents(object_copy) <- factor(Idents(object_copy), levels= my_levels)
+VlnPlot(object_copy, features = c("some_gene"))
+
+#Add external dimension reduction data
+paperUMAP <- read.table("skm.umap.coord.txt",header = FALSE)
+numap <- as.matrix(paperUMAP[,2:3]) #把第二，三列读入matrix
+rownames(numap) <- rownames(testbarcode_copy@reductions[["pca"]]@cell.embeddings[,1:2]) #row name
+colnames(numap) <- paste0("nUMAP_", 1:2)
+testbarcode_copy[["numap"]] <- CreateDimReducObject(embeddings = numap, key = "nUMAP_", assay = DefaultAssay(testbarcode_copy))
+DimPlot(testbarcode_copy,reduction = "numap", label = T)
+
+#Stacked Vlnplot
+ 
+Find more at https://divingintogeneticsandgenomics.rbind.io/post/stacked-violin-plot-for-visualizing-single-cell-data-in-seurat/
