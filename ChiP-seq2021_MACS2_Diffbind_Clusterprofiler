@@ -1,0 +1,265 @@
+##Mouse genome and annotation are downloaded from GENECODES
+##DO NOT USE PRE-BUILT INDEX!!!
+
+#Bowtie2 build index:
+
+#!/bin/bash
+#SBATCH --job-name=j_Bowtie2
+#SBATCH --partition=batch
+#SBATCH --mail-type=ALL
+#SBATCH --mail-user=renjieshang@uga.edu
+#SBATCH --ntasks=4
+#SBATCH --mem=100gb
+#SBATCH --time=12:00:00
+#SBATCH --output=Bowtie2.%j.out
+#SBATCH --error=Bowtie2.%j.err
+cd $SLURM_SUBMIT_DIR
+
+ml Bowtie2/2.4.1-GCC-8.3.0
+
+bowtie2-build -f /lustre2/scratch/rs14482/workDir/BiLabRNAseq/Genomes/GRCm38.p6.genome.fa bt2mouse
+
+##Bowtie2 alignment:
+
+#!/bin/bash
+#SBATCH --job-name=j_Bowtie2
+#SBATCH --partition=batch
+#SBATCH --mail-type=ALL
+#SBATCH --mail-user=renjieshang@uga.edu
+#SBATCH --ntasks=1
+#SBATCH --mem=40gb
+#SBATCH --time=24:00:00
+#SBATCH --output=Bowtie2.%j.out
+#SBATCH --error=Bowtie2.%j.err
+cd $SLURM_SUBMIT_DIR
+
+for ((i=36; i<=75; i++));
+do
+ml Bowtie2/2.4.1-GCC-8.3.0
+ml SAMtools/0.1.20-GCC-8.3.0
+bowtie2 -p 10 --local -N 1 -x /lustre2/scratch/rs14482/workDir/BiLabRNAseq/ChiP/bt2index/bt2mouse -U SRR0675${i}.fastq.gz | samtools view -bSh - > SRR0675${i}.bam
+done
+
+##Sort and index bam files:
+
+#!/bin/bash
+#SBATCH --job-name=sortandindex
+#SBATCH --partition=batch
+#SBATCH --mail-type=ALL
+#SBATCH --mail-user=renjieshang@uga.edu
+#SBATCH --ntasks=4
+#SBATCH --mem=60gb
+#SBATCH --time=24:00:00
+#SBATCH --output=sortindex.%j.out
+#SBATCH --error=sortindex.%j.err
+cd $SLURM_SUBMIT_DIR
+
+ml SAMtools/1.10-GCC-8.3.0
+
+samtools sort SRR035036.bam -o 36.sorted.bam
+samtools sort SRR035037.bam -o 37.sorted.bam
+samtools sort SRR035038.bam -o 38.sorted.bam
+samtools sort SRR035039.bam -o 39.sorted.bam
+samtools sort SRR035040.bam -o 40.sorted.bam
+samtools sort SRR035041.bam -o 41.sorted.bam
+samtools sort SRR035056.bam -o 56.sorted.bam
+samtools sort SRR067575.bam -o 75.sorted.bam
+
+samtools index 36.sorted.bam
+samtools index 37.sorted.bam
+samtools index 38.sorted.bam
+samtools index 39.sorted.bam
+samtools index 40.sorted.bam
+samtools index 41.sorted.bam
+samtools index 56.sorted.bam
+samtools index 75.sorted.bam
+
+##Filter bam files by removing chrX/Y/M/Unknown:
+
+#!/bin/bash
+#SBATCH --job-name=filter
+#SBATCH --partition=batch
+#SBATCH --mail-type=ALL
+#SBATCH --mail-user=renjieshang@uga.edu
+#SBATCH --ntasks=1
+#SBATCH --mem=40gb
+#SBATCH --time=24:00:00
+#SBATCH --output=filter.%j.out
+#SBATCH --error=filter.%j.err
+cd $SLURM_SUBMIT_DIR
+
+for ((i=36; i<=75; i++));
+do
+
+ml SAMtools/1.10-GCC-8.3.0
+
+samtools view -h ${i}.sorted.bam | awk  '($3 != "chrM" && $3 != "chrX" && $3 != "chrY" && $3 != "random")' | samtools view -Shb - > ${i}.sorted.filtered.bam
+
+done
+
+##index sorted_filtered.bam files:
+
+#!/bin/bash
+#SBATCH --job-name=finalindex
+#SBATCH --partition=batch
+#SBATCH --mail-type=ALL
+#SBATCH --mail-user=renjieshang@uga.edu
+#SBATCH --ntasks=4
+#SBATCH --mem=60gb
+#SBATCH --time=24:00:00
+#SBATCH --output=sortindex.%j.out
+#SBATCH --error=sortindex.%j.err
+cd $SLURM_SUBMIT_DIR
+
+ml SAMtools/1.10-GCC-8.3.0
+
+samtools index 36.sorted.filtered.bam
+samtools index 37.sorted.filtered.bam
+samtools index 38.sorted.filtered.bam
+samtools index 39.sorted.filtered.bam
+samtools index 40.sorted.filtered.bam
+samtools index 41.sorted.filtered.bam
+samtools index 56.sorted.filtered.bam
+samtools index 75.sorted.filtered.bam
+
+##Use MACS2 to call peaks:
+##Read 11-8-2021 work report!!
+##-c: input file
+##SHIFT:BE CAREFUL! This parameter means obligatory shift all reads from 5’ to 3’ X bp! Apply this only when you know very well your binding sites is downstream X bp of read!
+##extsize: Extent all reads to same total length from 5’ to 3’. Dev Cell Paper said 200bp.
+
+
+#!/bin/bash
+#SBATCH --job-name=filter
+#SBATCH --partition=batch
+#SBATCH --mail-type=ALL
+#SBATCH --mail-user=renjieshang@uga.edu
+#SBATCH --ntasks=1
+#SBATCH --mem=40gb
+#SBATCH --time=24:00:00
+#SBATCH --output=filter.%j.out
+#SBATCH --error=filter.%j.err
+cd $SLURM_SUBMIT_DIR
+
+for i in 36 37 38 39 40 41 75;
+do
+
+ml MACS2/2.2.7.1-foss-2019b-Python-3.7.4
+
+macs2 callpeak -t ${i}.sorted.filtered.bam --outdir ${i}./MACS2peak -n ${i}. -g mm -B --keep-dup 1 <--nomodel --extsize 200> -q 0.05 -c 56.sorted.filtered.bam
+
+done
+##Generated each folder contains .bdg files for igv visualization, narrow.peak is input for following analysis:
+##learned from: https://mp.weixin.qq.com/s?__biz=MzIyNzgyNDAxMg==&mid=2247486177&idx=1&sn=f92c444128da679ee02999e8b784e887&chksm=e85a1202df2d9b144d84d5df5282212f5a5084e47ab264cf893319e3e749e949f836f819e08c&scene=21#wechat_redirect
+##learned from: https://mp.weixin.qq.com/s/-PVcaPs5dUbwItqHs7W-8w
+##Download all ChiP files from Cluster;
+
+##Prepare SampleSheet.csv which contains peak file and sorted_filtered.bam files:
+
+SampleID,Factor,Replicate,bamReads,ControlID,bamControl,Peaks,PeakCaller,Tissue,Condition
+myotube1,myotube,1,/Users/srj/Desktop/DataAnalysis/MyoD_ChiP/ChiP/bam/36.sorted.filtered.bam,NA,NA,/Users/srj/Desktop/DataAnalysis/MyoD_ChiP/ChiP/36/MACS2peak/36._peaks.narrowPeak,narrow,NA,NA
+myotube2,myotube,2,/Users/srj/Desktop/DataAnalysis/MyoD_ChiP/ChiP/bam/37.sorted.filtered.bam,NA,NA,/Users/srj/Desktop/DataAnalysis/MyoD_ChiP/ChiP/37/MACS2peak/37._peaks.narrowPeak,narrow,NA,NA
+myotube3,myotube,3,/Users/srj/Desktop/DataAnalysis/MyoD_ChiP/ChiP/bam/38.sorted.filtered.bam,NA,NA,/Users/srj/Desktop/DataAnalysis/MyoD_ChiP/ChiP/38/MACS2peak/38._peaks.narrowPeak,narrow,NA,NA
+myoblast95.1,myoblast,1,/Users/srj/Desktop/DataAnalysis/MyoD_ChiP/ChiP/bam/39.sorted.filtered.bam,NA,NA,/Users/srj/Desktop/DataAnalysis/MyoD_ChiP/ChiP/39/MACS2peak/39._peaks.narrowPeak,narrow,NA,NA
+myoblast95.2,myoblast,2,/Users/srj/Desktop/DataAnalysis/MyoD_ChiP/ChiP/bam/40.sorted.filtered.bam,NA,NA,/Users/srj/Desktop/DataAnalysis/MyoD_ChiP/ChiP/40/MACS2peak/40._peaks.narrowPeak,narrow,NA,NA
+myoblast95.3,myoblast,3,/Users/srj/Desktop/DataAnalysis/MyoD_ChiP/ChiP/bam/41.sorted.filtered.bam,NA,NA,/Users/srj/Desktop/DataAnalysis/MyoD_ChiP/ChiP/41/MACS2peak/41._peaks.narrowPeak,narrow,NA,NA
+myoblast50,myoblast,4,/Users/srj/Desktop/DataAnalysis/MyoD_ChiP/ChiP/bam/75.sorted.filtered.bam,NA,NA,/Users/srj/Desktop/DataAnalysis/MyoD_ChiP/ChiP/75/MACS2peak/75._peaks.narrowPeak,narrow,NA,NA
+
+##First do QC:
+
+setwd("~/Desktop/DataAnalysis/MyoD_ChiP/ChiP")
+BiocManager::install("ChIPQC")
+library(ChIPQC)
+samples <- read.csv("SampleSheet.csv")
+view(samples)
+View(samples)
+chipObj <- ChIPQC(samples, annotation="mm10")
+ChIPQCreport(chipObj, reportName="ChIP_QC_report: Myotube and Myoblast", reportFolder="ChIPQCreport")
+savehistory("~/Desktop/DataAnalysis/MyoD_ChiP/ChiP/ChipQC.Rhistory")
+
+##Find DiffBind:
+
+library(DiffBind)
+dbObj <- dba(sampleSheet="SampleSheet.csv")
+dbObj <- dba.count(dbObj, bUseSummarizeOverlaps=TRUE)
+dba.plotPCA(dbObj,  attributes=DBA_FACTOR, label=DBA_ID)
+plot(dbObj)
+dba.plotVenn(dbObj,  attributes=DBA_FACTOR, label=DBA_ID)
+dba.plotVenn(dbObj)
+dba.plotVenn(dbObj, mask = 2)
+dba.plotVenn(dbObj,2:3)
+dba.plotVenn(dbObj,4:5)
+dba.plotVenn(dbObj,1:5)
+dba.plotVenn(dbObj,3:5)
+dba.plotVenn(dbObj,3:4)
+dba.plotVenn(dbObj,3:6)
+dba.plotVenn(dbObj,2:7)
+dba.plotVenn(dbObj,2:3)
+dba.plotVenn(dbObj,3:6)
+dba.plotVenn(dbObj,3:4)
+dba.plotVenn(dbObj,3:5)
+dba.plotVenn(dbObj,2:3)
+dbObj <- dba.contrast(dbObj, categories=DBA_FACTOR,minMembers = 2)
+dbObj <- dba.analyze(dbObj, method=DBA_ALL_METHODS)
+dba.show(dbObj, bContrasts=T)
+dba.plotVenn(dbObj,contrast=1,method=DBA_ALL_METHODS)
+comp1.deseq <- dba.report(dbObj, method=DBA_DESEQ2, contrast = 1, th=1)
+out_deseq <- as.data.frame(comp1.deseq)
+comp1.edgeR <- dba.report(dbObj, method=DBA_EDGER, contrast = 1, th=1)
+out_edger <- as.data.frame(comp1.edgeR)
+write.table(out_edger, file="MyotubevsMyoblast_edgeR.txt", sep="\t", quote=F, col.names = NA)
+write.table(out_deseq, file="MyotubevsMyoblast_DESeq2.txt", sep="\t", quote=F, col.names = NA)
+View(out_edger)
+View(samples)
+summary(dbObj)
+out_edger_bed <- as.data.frame(comp1.edgeR)
+edge.bed <- out_edger_bed[ which(out_edger_bed$FDR < 0.05), c("seqnames", "start", "end", "strand", "Fold")]
+write.table(edge.bed, file="MyotubevsMyoblast_edgeR_sig.bed", sep="\t", quote=F, row.names=F, col.names=F)
+out_desseq_bed <- as.data.frame(comp1.deseq)
+deseq.bed <- out_desseq_bed[ which(out_desseq_bed$FDR < 0.05), c("seqnames", "start", "end", "width", "strand", "Conc","Conc_myotube","Conc_myoblast", "Fold", "p.value", "FDR")]
+write.table(deseq.bed, file="MyotubevsMyoblast_deseq_sig.bed", sep="\t", quote=F, row.names=F, col.names=F)
+
+##Annotate diff peaks:
+
+BiocManager::install("ChIPseeker")
+BiocManager::install("org.Mm.eg.db")
+BiocManager::install("TxDb.Mmusculus.UCSC.mm10.knownGene")
+BiocManager::install("org.Mm.eg.db")
+BiocManager::install("clusterProfiler")
+library("ChIPseeker")
+library(clusterProfiler)
+library("org.Mm.eg.db")
+library(TxDb.Mmusculus.UCSC.mm10.knownGene)
+nanog <- readPeakFile("MyotubevsMyoblast_deseq_sig.bed")
+txdb <- TxDb.Mmusculus.UCSC.mm10.knownGene
+peaks <- list(Nanog=nanog)
+promoter <- getPromoters(TxDb=txdb, upstream=2000, downstream=2000)
+tagMatrixList <- lapply(peaks, getTagMatrix, windows=promoter)
+peakAnnoList <- lapply(peaks, annotatePeak, TxDb=txdb,tssRegion=c(-2000, 2000), verbose=FALSE,addFlankGeneInfo=TRUE, flankDistance=5000,annoDb="org.Mm.eg.db")
+plotAnnoBar(peakAnnoList)
+plotDistToTSS(peakAnnoList,title="Distribution of transcription factor-binding loci relative to TSS")
+peakAnnoList_datafrome <- as.data.frame(peakAnnoList)
+View(peakAnnoList_datafrome)
+entrez <- peakAnnoList_datafrome$Nanog.geneId
+ego <- enrichGO(gene = entrez,
+keyType = "ENTREZID",
+OrgDb = org.Mm.eg.db,
+ont = "BP",
+pAdjustMethod = "BH",
+qvalueCutoff = 0.05,
+readable = TRUE)
+dotplot(ego, showCategory=50)
+compKEGG <- compareCluster(geneCluster = entrez,
+fun = "enrichKEGG",
+organism = "mouse",
+pvalueCutoff  = 0.05,
+pAdjustMethod = "BH")
+dotplot(compKEGG, showCategory = 20, title = "KEGG Pathway Enrichment Analysis")
+save(peakAnnoList,file="peakAnnolist.rda")
+write.table(as.data.frame(peakAnnoList$Nanog),file="Myotube.PeakAnno",sep="\t", col.names = T, row.names = F)
+
+#delete v4 and v5 in output file, v6 to v11 are Conc	Conc_myotube	Conc_myoblast	Fold p.value	FDR.
+
+savehistory("~/Desktop/DataAnalysis/MyoD_ChiP/ChiP/QC_Diffbind_Annotate_GO_KEGG.Rhistory")
+save.image(file = "ChiP_Practice.Rdata")
+savehistory("~/Desktop/DataAnalysis/MyoD_ChiP/ChiP/QC_Diffbind_Annotate_GO_KEGG.Rhistory")
