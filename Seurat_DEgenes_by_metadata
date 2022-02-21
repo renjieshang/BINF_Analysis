@@ -1,0 +1,129 @@
+###Find DE genes by metadata(cell type…
+###Add metadata
+###manually make a csv table:
+ 
+> library(Seurat)
+> library(dplyr)
+> setwd("~/Desktop/single_cell/GSE142581_RAW")
+> counts71 <- read.table("GSM4232371_0dpi-ActD.txt.gz", header = TRUE, row.names = 1, as.is = TRUE)
+> GSM71 <- CreateSeuratObject(counts = counts71, min.cells = 3, project = "DLLNOTCH")
+> View(GSM71)
+> GSM71 <- NormalizeData(GSM71, normalization.method = "LogNormalize", scale.factor = 10000)
+##Log what?
+Performing log-normalization
+0%   10   20   30   40   50   60   70   80   90   100%
+[----|----|----|----|----|----|----|----|----|----|
+**************************************************|
+> GSM71 <- ScaleData(GSM71)
+Centering and scaling data matrix
+  |=================================================================| 100%
+> all.genes <- rownames(GSM71)
+> GSM71 <- ScaleData(GSM71, features = all.genes)
+Centering and scaling data matrix
+  |=================================================================| 100%
+> annotation <- read.table("~/Desktop/single_cell/GSE142581_RAW/GSM71/GSM71metadata_1.csv", sep = ",", row.names = 1)
+> View(annotation)
+ 
+> GSM71 <- AddMetaData(GSM71, metadata = annotation, col.name = "A")
+> levels(GSM71@meta.data[["A"]])
+[1] "1_Quiescence"  "2_Notch2-high"
+> View(GSM71@meta.data)
+ 
+> Idents(object = GSM71) <- GSM71@meta.data$'A'
+> levels(GSM71)
+[1] "1_Quiescence"  "2_Notch2-high"
+> GSM71.markers <- FindAllMarkers(GSM71)
+Calculating cluster 1_Quiescence
+  |++++++++++++++++++++++++++++++++++++++++++++++++++| 100% elapsed=01s  
+Calculating cluster 2_Notch2-high
+  |++++++++++++++++++++++++++++++++++++++++++++++++++| 100% elapsed=01s  
+> View(GSM71.markers)
+
+ 
+> RidgePlot(GSM71, features = c("Notch2", "Sdc4", "Spry2", "Kdm6b"))
+ 
+##After PCA 
+> top10markers <- GSM71.markers %>% group_by(cluster) %>% top_n(n = 10, wt = avg_logFC)
+>library(ggplot2)
+> DoHeatmap(GSM71, features = top10markers$gene, label = F) + scale_fill_gradientn(colors = colorRampPalette(c("#0000ff", "#ffffff", "#ff0000"))(256))
+> GSM71 <- RunTSNE(GSM71, dims = 1:10)
+> DimPlot(GSM71, reduction = "tsne", label = TRUE)
+
+
+ 
+
+
+## Please compare Primary cells, between 4dpi aRW (1,2) with aDll1 (1,2)
+## GSM4232375, GSM4232376 with GSM3232380, GSM4232381
+
+ 
+
+> setwd("~/Desktop/single_cell/GSE142581_RAW")
+> counts75 <- read.table("GSM4232375_4dpi+ActD+aRW-1.txt.gz", header = TRUE, row.names = 1, as.is = TRUE)
+> counts76 <- read.table("GSM4232376_4dpi+ActD+aRW-2.txt.gz", header = TRUE, row.names = 1, as.is = TRUE)
+> counts80 <- read.table("GSM4232380_4dpi+ActD+aDll1-1.txt.gz", header = TRUE, row.names = 1, as.is = TRUE)
+> counts81 <- read.table("GSM4232381_4dpi+ActD+aDll1-2.txt.gz", header = TRUE, row.names = 1, as.is = TRUE)
+#compare #objects and paper:
+ 
+ 
+#Create seurat object
+> GSM75 <- CreateSeuratObject(counts = counts75, min.cells = 3, project = "DLLNOTCH75")
+Warning message:
+In storage.mode(from) <- "double" : NAs introduced by coercion
+> GSM76 <- CreateSeuratObject(counts = counts76, min.cells = 3, project = "DLLNOTCH76")
+Warning message:
+In storage.mode(from) <- "double" : NAs introduced by coercion
+> GSM80 <- CreateSeuratObject(counts = counts80, min.cells = 3, project = "DLLNOTCH80")
+Warning message:
+In storage.mode(from) <- "double" : NAs introduced by coercion
+> GSM81 <- CreateSeuratObject(counts = counts81, min.cells = 3, project = "DLLNOTCH81")
+#Manually edit “Primary” annotation, make it different between (75 76)from(80 81)
+    
+> annotation75 <- read.table("~/Desktop/single_cell/GSE142581_RAW/75metadata.csv", sep = ",", row.names = 1)
+> annotation76 <- read.table("~/Desktop/single_cell/GSE142581_RAW/76metadata.csv", sep = ",", row.names = 1)
+> annotation80 <- read.table("~/Desktop/single_cell/GSE142581_RAW/80metadata.csv", sep = ",", row.names = 1)
+> annotation81 <- read.table("~/Desktop/single_cell/GSE142581_RAW/81metadata.csv", sep = ",", row.names = 1)
+#Add metadata to each object
+> GSM75 <- AddMetaData(GSM75, metadata = annotation75, col.name = "A")
+> GSM76 <- AddMetaData(GSM76, metadata = annotation76, col.name = "A")
+> GSM80 <- AddMetaData(GSM80, metadata = annotation80, col.name = "A")
+> GSM81 <- AddMetaData(GSM81, metadata = annotation81, col.name = "A")
+#merge these 4 objects
+>Merged4 <- merge(GSM75, y = c(GSM76, GSM80, GSM81), add.cell.ids = c("75", "76", "80", "81"), project = "Primary")
+#change cell indent
+> Idents(object = Merged4) <- Merged4@meta.data$'A'
+> levels(Merged4)
+[1] "3_Proliferation"   "1_Primary1"        "4_Differentiation" "5_Notch2-high"     "2_ECM"            
+[6] "1_Primary2
+#Normalize and scale data
+> Merged4 <- NormalizeData(Merged4, normalization.method = "LogNormalize", scale.factor = 10000)
+Performing log-normalization
+0%   10   20   30   40   50   60   70   80   90   100%
+[----|----|----|----|----|----|----|----|----|----|
+**************************************************|
+> Merged4 <- ScaleData(Merged4)
+Centering and scaling data matrix
+  |====================================================================================================| 100%
+> all.genes <- rownames(Merged4)
+> Merged4 <- ScaleData(Merged4, features = all.genes)
+Centering and scaling data matrix
+  |========================================================================================================| 100%
+> levels(Merged4)
+[1] "3_Proliferation"   "1_Primary1"        "4_Differentiation" "5_Notch2-high"     "2_ECM"            
+[6] "1_Primary2
+#FindMarkers between "1_Primary1” and "1_Primary2”
+> Primary.markers <- FindMarkers(Merged4, ident.1 = "1_Primary1", ident.2 = "1_Primary2")
+  |++++++++++++++++++++++++++++++++++++++++++++++++++| 100% elapsed=10s
+> write.csv(Primary.markers, file = "~/Desktop/single_cell/GSE142581_RAW/Primary_DE_genes.csv")
+> View(Primary.markers)
+ 
+> RidgePlot(Merged4, features = c("Mgp", "Gpx3", "Bgn", "Htra3", "Rpl10-ps3"))
+Picking joint bandwidth of 0.152
+Picking joint bandwidth of 0.234
+Picking joint bandwidth of 0.11
+Picking joint bandwidth of 0.0558
+Picking joint bandwidth of 0.144
+ 
+> RidgePlot(Merged4, features = c("Mgp", "Gpx3", "Bgn", "Htra3", "Rpl10-ps3"), idents = c("1_Primary1", "1_Primary2" ))
+ 
+>saveRDS(GSM71, “~/Desktop/single_cell/71_new.rds”)
