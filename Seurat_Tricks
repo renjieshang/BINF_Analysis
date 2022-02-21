@@ -23,3 +23,44 @@ DimPlot(testbarcode_copy,reduction = "numap", label = T)
 #Stacked Vlnplot
  
 Find more at https://divingintogeneticsandgenomics.rbind.io/post/stacked-violin-plot-for-visualizing-single-cell-data-in-seurat/
+
+
+##read Seurat R object
+load("facs_Limb_Muscle_seurat_tiss.Robj")
+
+#Extract MuSC and rename
+MuSC <- subset(tiss, idents = c("0","2"))
+MuSC <- RenameIdents(MuSC, '0' = "MuSC")
+MuSC <- RenameIdents(MuSC, '2' = "MuSC")
+
+#Get cell id by gene expression level and add to metadata and change idents
+CntfrPos <- colnames(subset(MuSC, subset = Cntfr >0))
+highORlow = ifelse(colnames(MuSC)%in%CntfrPos,'Pos','Neg')
+table(highORlow)
+MuSC@meta.data$highORlow=highORlow
+View(MuSC@meta.data)
+Idents(MuSC) <- MuSC@meta.data$highORlow
+
+#Extract cell id by gene expression and gender and add to metadata
+FX <- colnames(subset(MuSC, subset = Xist >0 & mouse.sex == "F"))
+MD <- colnames(subset(MuSC, subset = Ddx3y >0 & mouse.sex == "M"))
+FX_OR_NONFX = ifelse(colnames(MuSC)%in%FX,'FX','NONFX')
+table(FX_OR_NONFX)
+MD_OR_NONMD = ifelse(colnames(MuSC)%in%MD,'MD','NONMD')
+table(MD_OR_NONMD)
+MuSC@meta.data$FX=FX_OR_NONFX
+MuSC@meta.data$MD=MD_OR_NONMD
+View(MuSC@meta.data)
+
+#DE can be done as long as having cell id
+FX_vs_MD_markers <- FindMarkers(MuSC, ident.1 = FX, ident.2 = MD)
+write.csv(FX_vs_MD_markers, file = "FX_vs_MD_markers.csv")
+
+#Alternatively, for better visualization, we can make metadata in excel and add back and perform DE
+write.csv(MuSC@meta.data, file = "metadata.csv")
+write.csv(MD,file = "MD.csv")
+write.csv(FX,file = "FX.csv")
+annotation <- read.table("Annotation.csv",sep = ",", row.names = 1)
+MuSC <- AddMetaData(MuSC, annotation, col.name = "FXvsMD")
+Idents(MuSC) <- MuSC@meta.data$FXvsMD
+FXMDmarkers <- FindMarkers(MuSC, ident.1 = "FX", ident.2 = "MD")
