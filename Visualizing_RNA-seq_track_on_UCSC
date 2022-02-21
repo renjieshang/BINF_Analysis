@@ -1,0 +1,50 @@
+1.	Fastq to sam
+
+2.	Sam to bam
+
+3.	Bam to sorted_bam
+
+4.	bedtools  genomecov -ibam bedtools  genomecov -ibam ./14_NICD2_single_sorted.bam -bg -split > 14_NICD2_single_sorted_split.bedgraph
+
+5.	bedgraph to bigwig:
+5.1	 install MySQL on Mac
+5.2	 Set directory as required: sudo mkdir ...#we create opt/lib/…by ourselves
+5.3	 Sudo install_name_tool -change /usr/local/opt/mysql/lib/libmysqlclient.20.dylib /usr/local/mysql-8.0.17-macos10.14-x86_64/lib/libmysqlclient.21.dylib /Users/SRJ/Desktop/bedGraphToBigWig
+5.4	 If xcrun: error: invalid active developer path (/Library/Developer/CommandLineTools), missing xcrun at: /Library/Developer/CommandLineTools/usr/bin/xcrun
+
+Then:
+      xcode-select –install
+5.5	 double click the software
+5.6	 chmod +x /Users/SRJ/Desktop
+    /Users/SRJ/Desktop/bedGraphToBigWig
+5.8 ./bedGraphToBigWig 14ss2.bedgraph https://hgdownload.soe.ucsc.edu/goldenPath/mm10/bigZips/mm10.chrom.sizes 14ss2.bw
+   
+6. Just prepare the bigwig files and create 3 txt files and upload them all to Cyverse, under the same directory
+
+7. The 3 txt files are:
+Hub.txt
+hub Renjie_Hub
+shortLabel Renjie Hub
+longLabel What is hot?
+genomesFile https://de.cyverse.org/dl/d/8B51BCE9-AAB4-4D27-A66F-2CFF130F44DE/genomes.txt
+email renjieshang@uga.edu
+
+genomes.txt
+genome mm10
+trackDb https://de.cyverse.org/dl/d/B4B4391B-016D-4ADF-8ADE-DF1F237D56BB/trackDb.txt
+
+trackDb.txt
+track 14NICD2
+bigDataUrl https://de.cyverse.org/dl/d/22618D50-4AE6-40A4-BEA4-2B389632E5B3/14ss2.bw
+shortLabel 14NICD2
+longLabel 14NICD2
+type bigWig
+color 0,0,255
+
+https://de.cyverse.org/dl/d/74683F25-2860-4ABF-8DBF-8F6BF21B5116/hub.txt
+
+
+wigtobigwig:
+./wigToBigWig /Users/bilab/Desktop/BiLabRNA-Seq/GSE37184_RAW/GSM913281_Input_C2C12_6hDelta_repl1.wig.gz http://hgdownload.cse.ucsc.edu/goldenPath/mm9/bigZips/mm9.chrom.sizes /Users/bilab/Desktop/BiLabRNA-Seq/GSE37184bw/GSM913281_Input_C2C12_6hDelta_repl1.bw -clip
+# -clip: if : line 47996889 of /Users/bilab/Desktop/BiLabRNA-Seq/GSE37184_RAW/GSM913281_Input_C2C12_6hDelta_repl1.wig.gz: chromosome chr12 has 121257530 bases, but item ends at 121257540
+
