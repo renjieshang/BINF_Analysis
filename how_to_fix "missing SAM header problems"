@@ -1,0 +1,23 @@
+Some program produces SAM file which has no header. When you use such file to do the further analysis, you will get   "missing SAM header problems". The following is a way to fix it.
+•	samtools faidx refseq.fa
+•	samtools view -bS -t refse.fai input.sam > input.bam
+ 
+refseq.fa is the file you used as reference while doing alignment.
+
+samtools view -bS -t genome.fa.fai GSM521257_60hr.sam.gz > 60hr.bam
+
+Then you need to sort the bam files:
+Samtools sort…
+#Even if after this bam file sorting step, the bedgraph file generated in next step is still not arranged by chr1-chrX 
+
+
+Then use bedtools genomecov -ibam 60hr_sorted.bam -bg -split -strand + > 60hr_split_plus.bedgraph
+#remember to delete the prefix: type=… color=… priority=…
+
+
+Then use local bedGraphToBigWig
+sort -k1,1 -k2,2n exp_pc.bedgraph > sorted.bedGraph
+#otherwise it will give 60hr_pc.bedGraph is not case-sensitive sorted at line 3339086.  Please use "sort -k1,1 -k2,2n" with LC_COLLATE=C,  or bedSort and try again.
+
+
+Then run ./bedGraphToBigWig sorted.bedGraph https://hgdownload.soe.ucsc.edu/goldenPath/mm9/bigZips/mm9.chrom.sizes exp.bw
