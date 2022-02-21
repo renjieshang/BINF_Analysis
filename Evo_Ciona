@@ -1,0 +1,178 @@
+#2020-10-5 Styela Clava
+
+#PBS -S /bin/bash
+#PBS -q highmem_q
+#PBS -N STAR_index_Hagfish
+#PBS -l nodes=1:ppn=4
+#PBS -l walltime=12:00:00
+#PBS -l mem=60gb
+
+#PBS -M renjieshang@uga.edu
+#PBS -m ae
+
+cd $PBS_O_WORKDIR
+
+~/apps/STAR-2.7.2a/bin/STAR \
+--runThreadN 12 \
+--runMode genomeGenerate \
+--genomeDir /scratch/rs14482/workDir/Styela/STARIndex_genome \
+--genomeFastaFiles /scratch/rs14482/workDir/Styela/GCA_013122585.1_ASM1312258v1_genomic.fna \
+--genomeSAindexNbases 13 \
+
+#download by wget
+#PBS -S /bin/bash
+#PBS -q batch
+#PBS -N download
+#PBS -l nodes=1:ppn=4
+#PBS -l walltime=24:00:00
+#PBS -l mem=10gb
+
+#PBS -M renjieshang@uga.edu
+#PBS -m ae
+
+cd $PBS_O_WORKDIR
+wget -q ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR859/004/SRR8599814/SRR8599814_1.fastq.gz
+wget -q ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR859/004/SRR8599814/SRR8599814_2.fastq.gz
+…
+
+##Automapping
+#PBS -S /bin/bash
+#PBS -q highmem_q
+#PBS -N AutomappingStyela
+#PBS -l nodes=1:ppn=8
+#PBS -l walltime=32:00:00
+#PBS -l mem=100gb
+
+#PBS -m ae
+
+cd $PBS_O_WORKDIR
+
+for ((i=14; i<=34; i++));
+do
+~/apps/STAR-2.7.2a/bin/STAR \
+--genomeDir /scratch/rs14482/workDir/Styela/STARIndex_genome \
+--readFilesIn \
+/scratch/rs14482/workDir/Styela/fastaq/SRR85998${i}_1.fastq.gz \
+/scratch/rs14482/workDir/Styela/fastaq/SRR85998${i}_2.fastq.gz \
+--readFilesCommand zcat \
+--runThreadN 20 \
+--outSAMtype BAM SortedByCoordinate \
+--outBAMsortingThreadN 10 \
+--alignEndsType EndToEnd \
+--outSAMstrandField intronMotif \
+--genomeSAindexNbases 13 \
+--limitBAMsortRAM 6000000000000 \
+--outFileNamePrefix SRR85998${i}.;
+done
+
+##index each bam
+#PBS -S /bin/bash
+#PBS -N samtools_index_All
+#PBS -q batch
+#PBS -l nodes=1:ppn=4
+#PBS -l walltime=48:00:00
+#PBS -l mem=32gb
+
+#PBS -M renjieshang@uga.edu
+#PBS -m ae
+
+cd $PBS_O_WORKDIR
+
+module load SAMtools/1.6-foss-2016b
+
+samtools index SRR8599814.Aligned.sortedByCoord.out.bam
+
+##Check the name of Contig
+#PBS -S /bin/bash
+#PBS -N samtools_Contigname
+#PBS -q batch
+#PBS -l nodes=1:ppn=4:AMD
+#PBS -l walltime=48:00:00
+#PBS -l mem=32gb
+
+#PBS -M renjieshang@uga.edu
+#PBS -m ae
+
+cd $PBS_O_WORKDIR
+
+module load SAMtools/1.6-foss-2016b
+
+samtools idxstats SRR8599814.Aligned.sortedByCoord.out.bam | head -n 20
+
+ 
+
+#just extract SJEG01000159.1
+
+#PBS -S /bin/bash
+#PBS -N samtools_extract
+#PBS -q batch
+#PBS -l nodes=1:ppn=4
+#PBS -l walltime=12:00:00
+#PBS -l mem=60gb
+
+#PBS -M renjieshang@uga.edu
+#PBS -m ae
+
+cd $PBS_O_WORKDIR
+
+module load SAMtools/1.6-foss-2016b
+
+samtools view -b SRR8599814.Aligned.sortedByCoord.out.bam SJEG01000159.1 > SRR8599814_Mymk.bam
+..
+
+#index Mymk.bam
+
+#20201009
+#merge files by development stage
+
+#PBS -S /bin/bash
+#PBS -N samtools_merge
+#PBS -q batch
+#PBS -l nodes=1:ppn=4
+#PBS -l walltime=12:00:00
+#PBS -l mem=30gb
+
+#PBS -M renjieshang@uga.edu
+#PBS -m ae
+
+cd $PBS_O_WORKDIR
+
+module load SAMtools/1.6-foss-2016b
+
+samtools merge 248cell.bam SRR8599817_Mymk.bam SRR8599818_Mymk.bam SRR8599820_Mymk.bam
+samtools merge gastrula.bam SRR8599814_Mymk.bam SRR8599821_Mymk.bam SRR8599822_Mymk.bam
+samtools merge neurula.bam SRR8599815_Mymk.bam SRR8599823_Mymk.bam SRR8599824_Mymk.bam
+samtools merge tailbud.bam SRR8599816_Mymk.bam SRR8599827_Mymk.bam SRR8599828_Mymk.bam
+samtools merge juvenile.bam SRR8599819_Mymk.bam SRR8599833_Mymk.bam SRR8599834_Mymk.bam
+samtools merge taillarva.bam SRR8599829_Mymk.bam SRR8599830_Mymk.bam SRR8599831_Mymk.bam
+samtools merge hatchedlarva.bam SRR8599825_Mymk.bam SRR8599826_Mymk.bam SRR8599832_Mymk.bam
+
+#index
+#PBS -S /bin/bash
+#PBS -N samtools_indexmerge
+#PBS -q batch
+#PBS -l nodes=1:ppn=4
+#PBS -l walltime=12:00:00
+#PBS -l mem=30gb
+
+#PBS -M renjieshang@uga.edu
+#PBS -m ae
+
+cd $PBS_O_WORKDIR
+
+module load SAMtools/1.6-foss-2016b
+
+samtools index 248cell.bam 
+samtools index gastrula.bam 
+samtools index neurula.bam 
+samtools index tailbud.bam 
+samtools index juvenile.bam 
+samtools index taillarva.bam 
+samtools index hatchedlarva.bam 
+
+#10-14 2020 extract Myh1 gene for Arctic Lamprey, Hagfish and Styela Clava
+Myh1 Styela Clava SJEG01000548.1
+Myh1 Hagfish FYBX02009502.1
+Myh1 arctic lamprey APJL01025475.1
+
+samtools view -b SRR5590378.Aligned.sortedByCoord.out.bam KE993736.1 > SRR5590378_Myh1.bam
