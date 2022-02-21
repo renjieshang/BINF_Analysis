@@ -1,0 +1,886 @@
+#Find Lamprey Myomaker
+
+#STAR index
+#PBS -S /bin/bash
+#PBS -q highmem_q
+#PBS -N STAR_index
+#PBS -l nodes=1:ppn=4
+#PBS -l walltime=12:00:00
+#PBS -l mem=60gb
+
+#PBS -M renjieshang@uga.edu
+#PBS -m ae
+
+cd $PBS_O_WORKDIR
+
+~/apps/STAR-2.7.2a/bin/STAR \
+--runThreadN 12 \
+--runMode genomeGenerate \
+--genomeDir /scratch/rs14482/workDir/Lamprey/STARIndex_chr50 \
+--genomeFastaFiles /scratch/rs14482/workDir/Lamprey/kPetMar1/kPetMar1_chr50.fasta \
+--genomeSAindexNbases 10\
+
+#STAR mapping RNA-seq reads to chr50
+#PBS -S /bin/bash
+#PBS -q highmem_q
+#PBS -N STAR_mapping
+#PBS -l nodes=1:ppn=4
+#PBS -l walltime=12:00:00
+#PBS -l mem=60gb
+
+#PBS -M renjieshang@uga.edu
+#PBS -m ae
+
+cd $PBS_O_WORKDIR
+
+~/apps/STAR-2.7.2a/bin/STAR \
+--genomeDir /scratch/rs14482/workDir/Lamprey/STARIndex_chr50 \
+--readFilesIn \
+/scratch/rs14482/workDir/Lamprey/PMTrunk1.fastq.1 \
+--runThreadN 20 \
+--outFileNamePrefix PMTrunk1. \
+--readFilesCommand zcat \
+--outSAMtype BAM SortedByCoordinate \
+--chimSegmentMin 20 \
+--outBAMsortingThreadN 10 \
+--alignEndsType EndToEnd \
+--outSAMstrandField intronMotif \##cufflinks only, not necessary
+--outReadsUnmapped Fastx \
+--genomeSAindexNbases 10\
+--limitBAMsortRAM 60000000000 \
+--outSAMunmapped Within \
+ 
+##大量reads比对到较小基因组或者某一片段时需要设置上图中的参数
+##star的速度会相当慢以至于fatal error。
+##可采用的解决办法是map到全基因组或者较大片段，再extract感兴趣区域的reads by (前提是必须要有bam的index！！) :
+samtools index <your.bam>  
+samtools view -b <your.bam> chr1:1000-2000 > chr1.bam
+https://www.biostars.org/p/120320/
+
+##或者直接在大片段区域内用igv可视化
+
+
+##samtools index to get .bai
+
+#PBS -S /bin/bash
+#PBS -N samtools_index
+#PBS -q batch
+#PBS -l nodes=1:ppn=4:AMD
+#PBS -l walltime=48:00:00
+#PBS -l mem=32gb
+
+#PBS -M renjieshang@uga.edu
+#PBS -m ae
+
+cd $PBS_O_WORKDIR
+
+module load SAMtools/1.6-foss-2016b
+
+samtools index PMTrunk1.Aligned.sortedByCoord.out.bam PMTrunk1.Aligned.sortedByCoord.out.bai
+
+##现在可以在igv里看了 但是bam文件太大了 可以用bedtools得到bedgraph文件再看
+#PBS -S /bin/bash
+#PBS -q batch
+#PBS -N bedtools
+#PBS -l nodes=1:ppn=1
+#PBS -l walltime=12:00:00
+#PBS -l mem=50gb
+
+#PBS -M renjieshang@uga.edu
+#PBS -m ae
+
+cd $PBS_O_WORKDIR
+
+module load BEDTools/2.26.0-foss-2018a
+bedtools genomecov -ibam ./PMTrunk1.Aligned.sortedByCoord.out.bam -bg -split > PMTrunk1.bedgraph
+
+##merge多个测序样品可以merge bam file by Samtools 
+samtools merge merged.bam in.1.bam in.2.bam ...
+##或者一开始就通过cat命令merge fastaq文件 
+
+##map 7 single end reads to chr50 at 1 time
+##--readFilesCommand zcat \ should be stated in 1st line!
+
+#PBS -S /bin/bash
+#PBS -q batch
+#PBS -N bedtools
+#PBS -l nodes=1:ppn=1
+#PBS -l walltime=12:00:00
+#PBS -l mem=50gb
+
+#PBS -M renjieshang@uga.edu
+#PBS -m ae
+
+cd $PBS_O_WORKDIR
+
+module load BEDTools/2.26.0-foss-2018a
+bedtools genomecov -ibam ./SRR388692.Aligned.sortedByCoord.out.bam -bg -split > SRR388692.bedgraph
+
+bedtools genomecov -ibam ./SRR389311.Aligned.sortedByCoord.out.bam -bg -split > SRR389311.bedgraph
+
+bedtools genomecov -ibam ./SRR389309.Aligned.sortedByCoord.out.bam -bg -split > SRR389309.bedgraph
+
+bedtools genomecov -ibam ./SRR388693.Aligned.sortedByCoord.out.bam -bg -split > SRR388693.bedgraph
+
+bedtools genomecov -ibam ./SRR389310.Aligned.sortedByCoord.out.bam -bg -split > SRR389310.bedgraph
+
+bedtools genomecov -ibam ./SRR388694.Aligned.sortedByCoord.out.bam -bg -split > SRR388694.bedgraph
+
+##merge 7 bam files
+
+#PBS -S /bin/bash
+#PBS -N samtools_merge
+#PBS -q batch
+#PBS -l nodes=1:ppn=4
+#PBS -l walltime=12:00:00
+#PBS -l mem=60gb
+
+#PBS -M renjieshang@uga.edu
+#PBS -m ae
+
+cd $PBS_O_WORKDIR
+
+module load SAMtools/1.6-foss-2016b
+
+samtools merge 7merged.bam SRR388692.Aligned.sortedByCoord.out.bam SRR388693.Aligned.sortedByCoord.out.bam SRR388694.Aligned.sortedByCoord.out.bam SRR389308.Aligned.sortedByCoord.out.bam SRR389309.Aligned.sortedByCoord.out.bam SRR389310.Aligned.sortedByCoord.out.bam SRR389311.Aligned.sortedByCoord.out.bam
+
+##get merged bedgraph
+#PBS -S /bin/bash
+#PBS -q batch
+#PBS -N mergebedgraph
+#PBS -l nodes=1:ppn=1
+#PBS -l walltime=12:00:00
+#PBS -l mem=50gb
+
+#PBS -M renjieshang@uga.edu
+#PBS -m ae
+
+cd $PBS_O_WORKDIR
+
+module load BEDTools/2.26.0-foss-2018a
+bedtools genomecov -ibam ./7merged.bam -bg -split > 7merged.bedgraph
+
+##将全部reads仅仅map到单独的chr50上会有很多的非特异的peaks
+##so plan to map to whole genome first and extract chr50.bam
+
+#STAR index whole genome
+#PBS -S /bin/bash
+#PBS -q highmem_q
+#PBS -N STAR_index
+#PBS -l nodes=1:ppn=4
+#PBS -l walltime=12:00:00
+#PBS -l mem=60gb
+
+#PBS -M renjieshang@uga.edu
+#PBS -m ae
+
+cd $PBS_O_WORKDIR
+
+~/apps/STAR-2.7.2a/bin/STAR \
+--runThreadN 12 \
+--runMode genomeGenerate \
+--genomeDir /scratch/rs14482/workDir/Lamprey/STARIndex_genome \
+--genomeFastaFiles /scratch/rs14482/workDir/Lamprey/kPetMar1/GCF_010993605.1_kPetMar1.pri_genomic.fna \
+--genomeSAindexNbases 14 \
+
+##Then map 2+7 single end reads to whole genome at 1 time
+##--readFilesCommand zcat \ should be stated in 1st line!
+
+#PBS -S /bin/bash
+#PBS -q highmem_q
+#PBS -N STAR_mapping_All
+#PBS -l nodes=1:ppn=8
+#PBS -l walltime=32:00:00
+#PBS -l mem=100gb
+
+#PBS -m ae
+
+cd $PBS_O_WORKDIR
+
+~/apps/STAR-2.7.2a/bin/STAR \
+--genomeDir /scratch/rs14482/workDir/Lamprey/STARIndex_genome \
+--readFilesIn \
+/scratch/rs14482/workDir/Lamprey/7_single_end/SRR389308.fastq.gz \
+--readFilesCommand zcat \
+--runThreadN 20 \
+--outFileNamePrefix SRR389308. \
+--outSAMtype BAM SortedByCoordinate \
+--outBAMsortingThreadN 10 \
+--alignEndsType EndToEnd \
+--outSAMstrandField intronMotif \
+--genomeSAindexNbases 14 \
+--limitBAMsortRAM 6000000000000 \
+
+
+##index each bam
+#PBS -S /bin/bash
+#PBS -N samtools_index_All
+#PBS -q batch
+#PBS -l nodes=1:ppn=4:AMD
+#PBS -l walltime=48:00:00
+#PBS -l mem=32gb
+
+#PBS -M renjieshang@uga.edu
+#PBS -m ae
+
+cd $PBS_O_WORKDIR
+
+module load SAMtools/1.6-foss-2016b
+
+samtools index SRR389308.Aligned.sortedByCoord.out.bam
+
+samtools index SRR389309.Aligned.sortedByCoord.out.bam
+
+samtools index SRR389310.Aligned.sortedByCoord.out.bam
+
+samtools index SRR389311.Aligned.sortedByCoord.out.bam
+
+samtools index SRR388692.Aligned.sortedByCoord.out.bam
+
+samtools index SRR388693.Aligned.sortedByCoord.out.bam
+
+samtools index SRR388694.Aligned.sortedByCoord.out.bam
+
+samtools index PMTrunk1.Aligned.sortedByCoord.out.bam
+
+samtools index PMTrunk2.Aligned.sortedByCoord.out.bam
+
+##what is the name chr50?
+#PBS -S /bin/bash
+#PBS -N samtools_chrname
+#PBS -q batch
+#PBS -l nodes=1:ppn=4:AMD
+#PBS -l walltime=48:00:00
+#PBS -l mem=32gb
+
+#PBS -M renjieshang@uga.edu
+#PBS -m ae
+
+cd $PBS_O_WORKDIR
+
+module load SAMtools/1.6-foss-2016b
+
+samtools idxstats PMTrunk2.Aligned.sortedByCoord.out.bam | head -n 20
+
+NC_046069.1     34253345        1014421 0
+NC_046070.1     26287998        874243  0
+NC_046071.1     25627751        1120394 0
+NC_046072.1     25147651        814190  0
+NC_046073.1     19408777        736344  0
+NC_046074.1     19176400        799651  0
+
+ 
+https://www.ncbi.nlm.nih.gov/assembly/GCF_010993605.1/
+##So Chr50 should be NC_046118.1
+
+
+##extrach each file’s chr50.bam
+#PBS -S /bin/bash
+#PBS -N samtools_extract
+#PBS -q batch
+#PBS -l nodes=1:ppn=4
+#PBS -l walltime=12:00:00
+#PBS -l mem=60gb
+
+#PBS -M renjieshang@uga.edu
+#PBS -m ae
+
+cd $PBS_O_WORKDIR
+
+module load SAMtools/1.6-foss-2016b
+
+samtools view -b SRR389308.Aligned.sortedByCoord.out.bam NC_046118.1 > SRR389308_chr50.bam
+
+samtools view -b SRR389309.Aligned.sortedByCoord.out.bam NC_046118.1 > SRR389309_chr50.bam
+
+samtools view -b SRR389310.Aligned.sortedByCoord.out.bam NC_046118.1 > SRR389310_chr50.bam
+
+samtools view -b SRR389311.Aligned.sortedByCoord.out.bam NC_046118.1 > SRR389311_chr50.bam
+
+samtools view -b SRR388692.Aligned.sortedByCoord.out.bam NC_046118.1 > SRR388692_chr50.bam
+
+samtools view -b SRR388693.Aligned.sortedByCoord.out.bam NC_046118.1 > SRR388693_chr50.bam
+
+samtools view -b SRR388694.Aligned.sortedByCoord.out.bam NC_046118.1 > SRR388694_chr50.bam
+
+samtools view -b PMTrunk1.Aligned.sortedByCoord.out.bam NC_046118.1 > PMTrunk1_chr50.bam
+
+samtools view -b PMTrunk2.Aligned.sortedByCoord.out.bam NC_046118.1 > PMTrunk2_chr50.bam
+
+##get all index file of chr50.bam, visualize is good 
+#PBS -S /bin/bash
+#PBS -N samtools_index
+#PBS -q batch
+#PBS -l nodes=1:ppn=4:AMD
+#PBS -l walltime=48:00:00
+#PBS -l mem=32gb
+
+#PBS -M renjieshang@uga.edu
+#PBS -m ae
+
+cd $PBS_O_WORKDIR
+
+module load SAMtools/1.6-foss-2016b
+
+samtools index PMTrunk1_chr50.bam
+
+samtools index SRR389308_chr50.bam
+
+samtools index SRR389309_chr50.bam
+
+samtools index SRR389310_chr50.bam
+
+samtools index SRR389311_chr50.bam
+
+samtools index SRR388692_chr50.bam
+
+samtools index SRR388693_chr50.bam
+
+samtools index SRR388694_chr50.bam
+
+samtools index PMTrunk2_chr50.bam
+
+
+
+##get each bedgraph file, optional because bam file is small
+#PBS -S /bin/bash
+#PBS -q batch
+#PBS -N each_bedgraph
+#PBS -l nodes=1:ppn=4
+#PBS -l walltime=12:00:00
+#PBS -l mem=50gb
+
+#PBS -M renjieshang@uga.edu
+#PBS -m ae
+
+cd $PBS_O_WORKDIR
+
+module load BEDTools/2.26.0-foss-2018a
+
+bedtools genomecov -ibam ./SRR389308_chr50.bam -bg -split > SRR389308_chr50.bedgraph
+
+bedtools genomecov -ibam ./SRR389309_chr50.bam -bg -split > SRR389309_chr50.bedgraph
+
+bedtools genomecov -ibam ./SRR389310_chr50.bam -bg -split > SRR389310_chr50.bedgraph
+
+bedtools genomecov -ibam ./SRR389311_chr50.bam -bg -split > SRR389311_chr50.bedgraph
+
+bedtools genomecov -ibam ./SRR388692_chr50.bam -bg -split > SRR388692_chr50.bedgraph
+
+bedtools genomecov -ibam ./SRR388693_chr50.bam -bg -split > SRR388693_chr50.bedgraph
+
+bedtools genomecov -ibam ./SRR388694_chr50.bam -bg -split > SRR388694_chr50.bedgraph
+
+bedtools genomecov -ibam ./ PMTrunk1_chr50.bam -bg -split > PMTrunk1_chr50.bedgraph
+
+bedtools genomecov -ibam ./ PMTrunk1_chr50.bam -bg -split > PMTrunk2_chr50.bedgraph
+
+
+##get 9merged bam file
+#PBS -S /bin/bash
+#PBS -N samtools_merge
+#PBS -q batch
+#PBS -l nodes=1:ppn=4
+#PBS -l walltime=12:00:00
+#PBS -l mem=60gb
+
+#PBS -M renjieshang@uga.edu
+#PBS -m ae
+
+cd $PBS_O_WORKDIR
+
+module load SAMtools/1.6-foss-2016b
+
+samtools merge 9merged.bam SRR389308_chr50.bam SRR389309_chr50.bam SRR389310_chr50.bam SRR389311_chr50.bam SRR388692_chr50.bam SRR388693_chr50.bam SRR388694_chr50.bam PMTrunk1_chr50.bam PMTrunk2_chr50.bam 
+
+##index 9merged bam file for visualization
+#PBS -S /bin/bash
+#PBS -N 9merged_index
+#PBS -q batch
+#PBS -l nodes=1:ppn=4:AMD
+#PBS -l walltime=48:00:00
+#PBS -l mem=32gb
+
+#PBS -M renjieshang@uga.edu
+#PBS -m ae
+
+cd $PBS_O_WORKDIR
+
+module load SAMtools/1.6-foss-2016b
+
+samtools index 9merged.bam
+
+
+##get 9merged bedgraph
+#PBS -S /bin/bash
+#PBS -q batch
+#PBS -N mergebedgraph
+#PBS -l nodes=1:ppn=1
+#PBS -l walltime=12:00:00
+#PBS -l mem=50gb
+
+#PBS -M renjieshang@uga.edu
+#PBS -m ae
+
+cd $PBS_O_WORKDIR
+
+module load BEDTools/2.26.0-foss-2018a
+bedtools genomecov -ibam ./9merged.bam -bg -split > 9merged.bedgraph
+
+
+##calculate gene counts
+>library(Rsubread)
+>Mymk <- data.frame(GeneID=c("Mymk"),Chr="NC_046118.1",Start=c(1158689,1161013,1162955,1164579,1175849),End=c(1158823,1161127,1163103,1164695,1175995),Strand=c("+"),stringsASFactors=FALSE)
+>MymkPMT1RC <- featureCounts(files = "~/Desktop/Evolution/Lamprey/WGS_result/PMTrunk1_chr50.bam",annot.ext = Mymk)
+> AllRC <- featureCounts(files = c("SRR388692_chr50.bam","SRR388693_chr50.bam","SRR388694_chr50.bam","SRR389308_chr50.bam","SRR389309_chr50.bam","SRR389310_chr50.bam","SRR389311_chr50.bam"),annot.ext = Mymk, useMetaFeatures=TRUE)
+> AllRC[["counts"]]
+     X.Users.bilab.Desktop.Evolution.Lamprey.WGS_result.SRR388692_chr50.bam
+Mymk                                                                      6
+     X.Users.bilab.Desktop.Evolution.Lamprey.WGS_result.SRR388693_chr50.bam
+Mymk                                                                      4
+     X.Users.bilab.Desktop.Evolution.Lamprey.WGS_result.SRR388694_chr50.bam
+Mymk                                                                     13
+     X.Users.bilab.Desktop.Evolution.Lamprey.WGS_result.SRR389308_chr50.bam
+Mymk                                                                     12
+     X.Users.bilab.Desktop.Evolution.Lamprey.WGS_result.SRR389309_chr50.bam
+Mymk                                                                     10
+     X.Users.bilab.Desktop.Evolution.Lamprey.WGS_result.SRR389310_chr50.bam
+Mymk                                                                      3
+     X.Users.bilab.Desktop.Evolution.Lamprey.WGS_result.SRR389311_chr50.bam
+Mymk                                                                     14
+
+##6-18 for 9merged.bam, too many junction, not clean
+##so just extract +-500 bp before exon0 and after exon5
+#PBS -S /bin/bash
+#PBS -N samtools_extract500
+#PBS -q batch
+#PBS -l nodes=1:ppn=4
+#PBS -l walltime=12:00:00
+#PBS -l mem=60gb
+
+#PBS -M renjieshang@uga.edu
+#PBS -m ae
+
+cd $PBS_O_WORKDIR
+
+module load SAMtools/1.6-foss-2016b
+
+samtools view -b 9merged.bam NC_046118.1:1,155,414-1,176,495  > 9merged500bp.bam
+
+
+##index 9merged500bp bam file for visualization
+#PBS -S /bin/bash
+#PBS -N 9merged500_index
+#PBS -q batch
+#PBS -l nodes=1:ppn=4:AMD
+#PBS -l walltime=12:00:00
+#PBS -l mem=32gb
+
+#PBS -M renjieshang@uga.edu
+#PBS -m ae
+
+cd $PBS_O_WORKDIR
+
+module load SAMtools/1.6-foss-2016b
+
+samtools index 9merged500bp.bam
+
+##For visualize the best result in IGV:
+ 
+
+
+
+
+##6-19-2020 visualize MymX
+##Just extract the bam file in chr31
+#PBS -S /bin/bash
+#PBS -N samtools_extract_chr31
+#PBS -q batch
+#PBS -l nodes=1:ppn=4
+#PBS -l walltime=12:00:00
+#PBS -l mem=60gb
+
+#PBS -M renjieshang@uga.edu
+#PBS -m ae
+
+cd $PBS_O_WORKDIR
+
+module load SAMtools/1.6-foss-2016b
+
+samtools view -b SRR389308.Aligned.sortedByCoord.out.bam NC_046099.1 > SRR389308_chr31.bam
+
+samtools view -b SRR389309.Aligned.sortedByCoord.out.bam NC_046099.1 > SRR389309_chr31.bam
+
+samtools view -b SRR389310.Aligned.sortedByCoord.out.bam NC_046099.1 > SRR389310_chr31.bam
+
+samtools view -b SRR389311.Aligned.sortedByCoord.out.bam NC_046099.1 > SRR389311_chr31.bam
+
+samtools view -b SRR388692.Aligned.sortedByCoord.out.bam NC_046099.1 > SRR388692_chr31.bam
+
+samtools view -b SRR388693.Aligned.sortedByCoord.out.bam NC_046099.1 > SRR388693_chr31.bam
+
+samtools view -b SRR388694.Aligned.sortedByCoord.out.bam NC_046099.1 > SRR388694_chr31.bam
+
+samtools view -b PMTrunk1.Aligned.sortedByCoord.out.bam NC_046099.1 > PMTrunk1_chr31.bam
+
+samtools view -b PMTrunk2.Aligned.sortedByCoord.out.bam NC_046099.1 > PMTrunk2_chr31.bam
+
+##get all index file of chr31.bam, visualize is good 
+#PBS -S /bin/bash
+#PBS -N samtools_index31
+#PBS -q batch
+#PBS -l nodes=1:ppn=4:AMD
+#PBS -l walltime=48:00:00
+#PBS -l mem=32gb
+
+#PBS -M renjieshang@uga.edu
+#PBS -m ae
+
+cd $PBS_O_WORKDIR
+
+module load SAMtools/1.6-foss-2016b
+
+samtools index PMTrunk1_chr31.bam
+
+samtools index SRR389308_chr31.bam
+
+samtools index SRR389309_chr31.bam
+
+samtools index SRR389310_chr31.bam
+
+samtools index SRR389311_chr31.bam
+
+samtools index SRR388692_chr31.bam
+
+samtools index SRR388693_chr31.bam
+
+samtools index SRR388694_chr31.bam
+
+samtools index PMTrunk2_chr31.bam
+
+##get 9merged bam file
+#PBS -S /bin/bash
+#PBS -N samtools_9merge31
+#PBS -q batch
+#PBS -l nodes=1:ppn=4
+#PBS -l walltime=12:00:00
+#PBS -l mem=60gb
+
+#PBS -M renjieshang@uga.edu
+#PBS -m ae
+
+cd $PBS_O_WORKDIR
+
+module load SAMtools/1.6-foss-2016b
+
+samtools merge 9mergedchr31.bam SRR389308_chr31.bam SRR389309_chr31.bam SRR389310_chr31.bam SRR389311_chr31.bam SRR388692_chr31.bam SRR388693_chr31.bam SRR388694_chr31.bam PMTrunk1_chr31.bam PMTrunk2_chr31.bam 
+
+##index 9merged bam file for visualization
+#PBS -S /bin/bash
+#PBS -N 9merged31_index
+#PBS -q batch
+#PBS -l nodes=1:ppn=4:AMD
+#PBS -l walltime=48:00:00
+#PBS -l mem=32gb
+
+#PBS -M renjieshang@uga.edu
+#PBS -m ae
+
+cd $PBS_O_WORKDIR
+
+module load SAMtools/1.6-foss-2016b
+
+samtools index 9mergedchr31.bam
+
+
+##More SL samples
+##transfer many samples from local to cluster, No ssh first! Just type in terminal
+scp -r /Users/bilab/Desktop/Evolution/Lamprey/more_samples/ rs14482@xfer.gacrc.uga.edu:/scratch/rs14482/workDir
+
+##transfer many samples from cluster to local
+scp -r rs14482@xfer.gacrc.uga.edu:/scratch/rs14482/workDir/Lamprey/more_samples/results/ /Users/bilab/Desktop/Evolution/Lamprey/more_samples/results/
+
+##mapping
+#PBS -S /bin/bash
+#PBS -q highmem_q
+#PBS -N STAR_mapping_All
+#PBS -l nodes=1:ppn=8
+#PBS -l walltime=32:00:00
+#PBS -l mem=100gb
+
+#PBS -m ae
+
+cd $PBS_O_WORKDIR
+
+~/apps/STAR-2.7.2a/bin/STAR \
+--genomeDir /scratch/rs14482/workDir/Lamprey/STARIndex_genome \
+--readFilesIn \
+/scratch/rs14482/workDir/Lamprey/more_samples/SRR2238808_1.fastq.gz \
+/scratch/rs14482/workDir/Lamprey/more_samples/SRR2238808_2.fastq.gz \
+--readFilesCommand zcat \
+--runThreadN 20 \
+--outFileNamePrefix SRR2238808. \
+--outSAMtype BAM SortedByCoordinate \
+--outBAMsortingThreadN 10 \
+--alignEndsType EndToEnd \
+--outSAMstrandField intronMotif \
+--genomeSAindexNbases 14 \
+--limitBAMsortRAM 6000000000000 \
+--alignTranscriptsPerReadNmax 100000 \
+--alignTranscriptsPerWindowNmax 10000 \
+## increase the number of allowed alignments for each read and alignment window - need to store more putative alignments for longer reads
+##other samples are same as previous
+…
+
+
+##index each bam first
+#PBS -S /bin/bash
+#PBS -N samtools_index_All
+#PBS -q batch
+#PBS -l nodes=1:ppn=4:AMD
+#PBS -l walltime=48:00:00
+#PBS -l mem=32gb
+
+#PBS -M renjieshang@uga.edu
+#PBS -m ae
+
+cd $PBS_O_WORKDIR
+
+module load SAMtools/1.6-foss-2016b
+
+samtools index SRR388689.Aligned.sortedByCoord.out.bam
+
+…
+
+##extrach each file’s chr50.bam and chr31.bam
+#PBS -S /bin/bash
+#PBS -N samtools_extract
+#PBS -q batch
+#PBS -l nodes=1:ppn=4
+#PBS -l walltime=12:00:00
+#PBS -l mem=60gb
+
+#PBS -M renjieshang@uga.edu
+#PBS -m ae
+
+cd $PBS_O_WORKDIR
+
+module load SAMtools/1.6-foss-2016b
+
+samtools view -b SRR388689.Aligned.sortedByCoord.out.bam NC_046118.1 > SRR388689_chr50.bam
+samtools view -b SRR388689.Aligned.sortedByCoord.out.bam NC_046099.1 > SRR388689_chr31.bam
+
+…
+
+##get.bai of each bam file to visualize in igv
+#PBS -S /bin/bash
+#PBS -N samtools_indexchr
+#PBS -q batch
+#PBS -l nodes=1:ppn=4:AMD
+#PBS -l walltime=48:00:00
+#PBS -l mem=32gb
+
+#PBS -M renjieshang@uga.edu
+#PBS -m ae
+
+cd $PBS_O_WORKDIR
+
+module load SAMtools/1.6-foss-2016b
+
+samtools index SRR388689_chr50.bam
+samtools index SRR388689_chr31.bam
+
+…
+
+##Japan  Lamprey samples
+##transfer many samples from local to cluster, No ssh first! Just type in terminal
+scp -r /Users/bilab/Desktop/Evolution/Lamprey/Japan_Lamprey/ rs14482@xfer.gacrc.uga.edu:/scratch/rs14482/workDir/Lamprey/ArcticLamprey/
+
+##transfer many samples from cluster to local
+scp -r rs14482@xfer.gacrc.uga.edu:/scratch/rs14482/workDir/Lamprey/more_samples/results/ /Users/bilab/Desktop/Evolution/Lamprey/more_samples/results/
+
+#STAR index whole genome
+#PBS -S /bin/bash
+#PBS -q highmem_q
+#PBS -N STAR_index
+#PBS -l nodes=1:ppn=4
+#PBS -l walltime=12:00:00
+#PBS -l mem=60gb
+
+#PBS -M renjieshang@uga.edu
+#PBS -m ae
+
+cd $PBS_O_WORKDIR
+
+~/apps/STAR-2.7.2a/bin/STAR \
+--runThreadN 12 \
+--runMode genomeGenerate \
+--genomeDir /scratch/rs14482/workDir/Lamprey/ArcticLamprey/STARIndex_genome \
+--genomeFastaFiles /scratch/rs14482/workDir/Lamprey/ArcticLamprey/Japan_Lamprey/GCA_000466285.1_LetJap1.0_genomic.fna \
+--genomeSAindexNbases 14 \
+--limitGenomeGenerateRAM 61933818581 \
+
+##mapping
+#PBS -S /bin/bash
+#PBS -q highmem_q
+#PBS -N STAR_mapping_All
+#PBS -l nodes=1:ppn=8
+#PBS -l walltime=32:00:00
+#PBS -l mem=100gb
+
+#PBS -m ae
+
+cd $PBS_O_WORKDIR
+
+~/apps/STAR-2.7.2a/bin/STAR \
+--genomeDir /scratch/rs14482/workDir/Lamprey/ArcticLamprey/STARIndex_genome \
+--readFilesIn \
+/scratch/rs14482/workDir/Lamprey/ArcticLamprey/SRR2238808_1.fastq.gz \
+/scratch/rs14482/workDir/Lamprey/ArcticLamprey/SRR2238808_2.fastq.gz \
+--readFilesCommand zcat \
+--runThreadN 20 \
+--outFileNamePrefix SRR2238808. \
+--outSAMtype BAM SortedByCoordinate \
+--outBAMsortingThreadN 10 \
+--alignEndsType EndToEnd \
+--outSAMstrandField intronMotif \
+--genomeSAindexNbases 14 \
+--limitBAMsortRAM 6000000000000 \
+
+
+##index each bam
+#PBS -S /bin/bash
+#PBS -N samtools_index_All
+#PBS -q batch
+#PBS -l nodes=1:ppn=4:AMD
+#PBS -l walltime=48:00:00
+#PBS -l mem=32gb
+
+#PBS -M renjieshang@uga.edu
+#PBS -m ae
+
+cd $PBS_O_WORKDIR
+
+module load SAMtools/1.6-foss-2016b
+
+samtools index SRR5590378.Aligned.sortedByCoord.out.bam
+…
+
+
+##what is the name of scaffold00031 and 00116? 
+#PBS -S /bin/bash
+#PBS -N samtools_chrname
+#PBS -q batch
+#PBS -l nodes=1:ppn=4:AMD
+#PBS -l walltime=48:00:00
+#PBS -l mem=32gb
+
+#PBS -M renjieshang@uga.edu
+#PBS -m ae
+
+cd $PBS_O_WORKDIR
+
+module load SAMtools/1.6-foss-2016b
+
+samtools idxstats SRR5590378.Aligned.sortedByCoord.out.bam | head -n 20
+
+ 
+ 
+ 
+So scaffold 00031 is KE993702.1; Scaffold 00116 is KE993787.1
+
+
+##extrach each file’s chr50.bam and chr31.bam
+#PBS -S /bin/bash
+#PBS -N samtools_extract
+#PBS -q batch
+#PBS -l nodes=1:ppn=4
+#PBS -l walltime=12:00:00
+#PBS -l mem=60gb
+
+#PBS -M renjieshang@uga.edu
+#PBS -m ae
+
+cd $PBS_O_WORKDIR
+
+module load SAMtools/1.6-foss-2016b
+
+samtools view -b SRR5590378.Aligned.sortedByCoord.out.bam KE993702.1 > SRR388689_scaffold31.bam
+samtools view -b SRR5590378.Aligned.sortedByCoord.out.bam KE993787.1 > SRR388689_scaffold116.bam
+
+…
+
+##get.bai of each bam file to visualize in igv
+#PBS -S /bin/bash
+#PBS -N samtools_indexchr
+#PBS -q batch
+#PBS -l nodes=1:ppn=4:AMD
+#PBS -l walltime=48:00:00
+#PBS -l mem=32gb
+
+#PBS -M renjieshang@uga.edu
+#PBS -m ae
+
+cd $PBS_O_WORKDIR
+
+module load SAMtools/1.6-foss-2016b
+
+samtools index SRR5590378_ scaffold31.bam
+samtools index SRR5590378_ scaffold116.bam
+
+…
+
+9-19-2020 merge several samples in 1 group
+#PBS -S /bin/bash
+#PBS -N samtools_merge
+#PBS -q batch
+#PBS -l nodes=1:ppn=4
+#PBS -l walltime=12:00:00
+#PBS -l mem=60gb
+
+#PBS -M renjieshang@uga.edu
+#PBS -m ae
+
+cd $PBS_O_WORKDIR
+
+module load SAMtools/1.6-foss-2016b
+
+samtools merge Merged1Mymx.bam SRR5590379_scaffold31.bam SRR5590380_scaffold31.bam SRR5590381_scaffold31.bam
+
+samtools merge Merged1Mymk.bam SRR5590379_scaffold116.bam SRR5590380_scaffold116.bam SRR5590381_scaffold116.bam
+
+samtools merge Merged2Mymx.bam SRR5590378_scaffold31.bam SRR5590382_scaffold31.bam SRR5590383_scaffold31.bam SRR5590384_scaffold31.bam SRR5590385_scaffold31.bam
+
+samtools merge Merged2Mymk.bam SRR5590378_scaffold116.bam SRR5590382_scaffold116.bam SRR5590383_scaffold116.bam SRR5590384_scaffold116.bam SRR5590385_scaffold116.bam
+
+samtools merge Merged3Mymx.bam SRR9670017_scaffold31.bam SRR9670016_scaffold31.bam SRR9670014_scaffold31.bam
+
+samtools merge Merged3Mymk.bam SRR9670017_scaffold116.bam SRR9670016_scaffold116.bam SRR9670014_scaffold116.bam
+
+samtools merge Merged4Mymx.bam SRR5051364_scaffold31.bam SRR5051329_scaffold31.bam SRR5051327_scaffold31.bam SRR5051312_scaffold31.bam SRR5051307_scaffold31.bam
+
+samtools merge Merged4Mymk.bam SRR5051364_scaffold116.bam SRR5051329_scaffold116.bam SRR5051327_scaffold116.bam SRR5051312_scaffold116.bam SRR5051307_scaffold116.bam
+
+9-20-2020 index them
+#PBS -S /bin/bash
+#PBS -N samtools_indexchr
+#PBS -q batch
+#PBS -l nodes=1:ppn=4:AMD
+#PBS -l walltime=48:00:00
+#PBS -l mem=32gb
+
+#PBS -M renjieshang@uga.edu
+#PBS -m ae
+
+cd $PBS_O_WORKDIR
+
+module load SAMtools/1.6-foss-2016b
+
+samtools index Merged1Mymx.bam
+samtools index Merged2Mymx.bam
+samtools index Merged3Mymx.bam
+samtools index Merged4Mymx.bam
+samtools index Merged1Mymk.bam
+samtools index Merged2Mymk.bam
+samtools index Merged3Mymk.bam
+samtools index Merged4Mymk.bam
