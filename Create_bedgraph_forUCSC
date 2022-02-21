@@ -1,0 +1,21 @@
+#Bedtools for get bedgraph format from bam to visualize in UCSC
+#PBS -S /bin/bash
+#PBS -q batch
+#PBS -N bedtools test
+#PBS -l nodes=1:ppn=1
+#PBS -l walltime=48:00:00
+#PBS -l mem=50gb
+
+#PBS -M renjieshang@uga.edu
+#PBS -m ae
+
+cd $PBS_O_WORKDIR
+
+module load BEDTools/2.26.0-foss-2018a
+bedtools genomecov -ibam ./14_NICD2_single_sorted.bam -bg -split > 14_NICD2_single_sorted_split.bedgraph
+
+#use vi to add
+track type=bedGraph name=case color=0,128,0 visibility=full priority=20
+
+#zip the bedgraph file
+#submit and load on UCSC Genome browser.
