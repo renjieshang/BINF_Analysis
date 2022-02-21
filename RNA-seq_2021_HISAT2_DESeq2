@@ -1,0 +1,111 @@
+##Human and Mouse genome/annottaion files are downloaded from GENECODE
+##DO NOT DOWNLOAD PRE-BUILT INDEX FROM WEBSITE!!!
+##Rename fastq files as i_R1_001, i_R2_001
+##Hisat2-StringTie-Ballgown/EdgeR pipeline
+##Build hisat2 genome index:
+
+#!/bin/bash
+#SBATCH --job-name=j_HISAT2_humanindex
+#SBATCH --mail-type=ALL
+#SBATCH --mail-user=renjieshang@uga.edu
+#SBATCH --ntasks=1
+#SBATCH --partition=highmem_p
+#SBATCH --cpus-per-task=4
+#SBATCH --mem=100gb
+#SBATCH --time=24:00:00
+#SBATCH --output=HISAT2humanindex.%j.out
+#SBATCH --error=HISAT2humanindex.%j.err
+cd $SLURM_SUBMIT_DIR
+
+ml HISAT2/2.1.0-foss-2019b
+
+hisat2-build /lustre2/scratch/rs14482/workDir/BiLabRNAseq/Genomes/GRCh38.p13.genome.fa humanht2
+
+##Alignment & output to bam & sort bam & build bam index:
+#!/bin/bash
+#SBATCH --job-name=j_HISAT2_1
+#SBATCH --mail-type=ALL
+#SBATCH --mail-user=renjieshang@uga.edu
+#SBATCH --ntasks=4
+#SBATCH --partition=highmem_p
+#SBATCH --cpus-per-task=4
+#SBATCH --mem=100gb
+#SBATCH --time=12:00:00
+#SBATCH --output=j_HISAT2_1.%j.out
+#SBATCH --error=j_HISAT2_1.%j.err
+cd $SLURM_SUBMIT_DIR
+
+for ((i=1;i<=8;i++));
+do
+
+ml HISAT2/2.1.0-foss-2019b
+ml SAMtools/1.10-GCC-8.3.0
+
+hisat2 -p 16 --dta -x /lustre2/scratch/rs14482/workDir/BiLabRNAseq/H_hisat2index/humanht2 -1 /lustre2/scratch/rs14482/workDir/BiLabRNAseq/Human/${i}_R1_001.fastq.gz -2 /lustre2/scratch/rs14482/workDir/BiLabRNAseq/Human/${i}_R2_001.fastq.gz | samtools view -bSh - > ${i}.bam
+samtools sort ${i}.bam -o ${i}.sorted.bam
+samtools index ${i}.sorted.bam
+
+done
+
+##StringTie assemble transcript & output aboundance file with TPM/FPKM (-A) & output Ballgown (-e -B) file for each sample:
+##transcript file already contains FPKM and TPM data...
+
+#!/bin/bash
+#SBATCH --job-name=Human_final
+#SBATCH --partition=highmem_p
+#SBATCH --mail-type=ALL
+#SBATCH --mail-user=renjieshang@uga.edu
+#SBATCH --ntasks=4
+#SBATCH --mem=200gb
+#SBATCH --time=24:00:00
+#SBATCH --output=Human_final.%j.out
+#SBATCH --error=Human_final.%j.err
+cd $SLURM_SUBMIT_DIR
+
+ml StringTie/2.1.1-GCC-8.3.0
+
+stringtie 1.sorted.bam -o ballgown1/1_final.gtf -p 16 -A -e -B -G /lustre2/scratch/rs14482/workDir/BiLabRNAseq/H_hisat2results/stringtie_mergedHuman.gtf
+stringtie 2.sorted.bam -o ballgown2/2_final.gtf -p 16 -A -e -B -G /lustre2/scratch/rs14482/workDir/BiLabRNAseq/H_hisat2results/stringtie_mergedHuman.gtf
+stringtie 3.sorted.bam -o ballgown3/3_final.gtf -p 16 -A -e -B -G /lustre2/scratch/rs14482/workDir/BiLabRNAseq/H_hisat2results/stringtie_mergedHuman.gtf
+stringtie 4.sorted.bam -o ballgown4/4_final.gtf -p 16 -A -e -B -G /lustre2/scratch/rs14482/workDir/BiLabRNAseq/H_hisat2results/stringtie_mergedHuman.gtf
+stringtie 5.sorted.bam -o ballgown5/5_final.gtf -p 16 -A -e -B -G /lustre2/scratch/rs14482/workDir/BiLabRNAseq/H_hisat2results/stringtie_mergedHuman.gtf
+stringtie 6.sorted.bam -o ballgown6/6_final.gtf -p 16 -A -e -B -G /lustre2/scratch/rs14482/workDir/BiLabRNAseq/H_hisat2results/stringtie_mergedHuman.gtf
+stringtie 7.sorted.bam -o ballgown7/7_final.gtf -p 16 -A -e -B -G /lustre2/scratch/rs14482/workDir/BiLabRNAseq/H_hisat2results/stringtie_mergedHuman.gtf
+stringtie 8.sorted.bam -o ballgown8/8_final.gtf -p 16 -A -e -B -G /lustre2/scratch/rs14482/workDir/BiLabRNAseq/H_hisat2results/stringtie_mergedHuman.gtf
+
+##If have intetrest in novel isoform, then need to finish standard procedure: merge-gffcompare-get gtf again;
+##Otherwise can just use Ballgown to do analysis;
+##Alternatively, can use each generated gtf file to extract HYPOTHESISED COUNTS to do EdgeR/DESeq2:
+
+wget http://ccb.jhu.edu/software/stringtie/dl/prepDE.py3
+module load Python/3.8.2-GCCcore-8.3.0
+python prepDE.py3 -i <the folder that contains all needed .gtf file>
+
+##The output is "gene_count_matrix.csv", can change name and use DESeq2 to do analysis:
+##Learned from https://blog.csdn.net/Candle_light/article/details/81953176
+
+library(DESeq2)
+countData <- as.matrix(read.csv("Mouse_gene_count_matrix.csv", row.names="gene_id"))
+condition <- factor(c("WT","WT","WT","KO","KO"))
+coldata <- data.frame(row.names = colnames(countData), condition)
+coldata
+condition
+dds<-DESeqDataSetFromMatrix(countData,coldata,design = ~condition)
+head(dds)
+dds<-DESeq(dds)
+resultsNames(dds)
+res<-results(dds)
+summary(res)
+plotMA(res,ylim=c(-2,2))
+mcols(res,use.names = TRUE)
+plot(res$log2FoldChange,res$pvalue)
+res <- res[order(res$padj),]
+resdata <- merge(as.data.frame(res),as.data.frame(counts(dds,normalize=TRUE)),by="row.names",sort=FALSE)
+deseq_res<-data.frame(resdata)
+write.csv(deseq_res, "DESeq2_mouse.csv")
+savehistory("~/Desktop/Data Analysis/RNA-seq/DE_by_PrepDE_DESeq2/Mouse_DESeq2.Rhistory")
+saveRDS(dds, "mouseDESeq.rds")
+savehistory("~/Desktop/Data Analysis/RNA-seq/DE_by_PrepDE_DESeq2/Mouse_DESeq_fromStringtie.Rhistory")
+
+##Above we use HYPOTHESISED COUNTS from StringTie to do the analysis by DESeq2;
+##Output Ballgown files can also be used;
