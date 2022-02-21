@@ -1,0 +1,209 @@
+Merge all fasta files
+Pengpengs-iMac-Lab2:5speciesMymx trimmed bilab$ cat Mouse\ musculus\ Mymx.fa Homo\ sapiens.fa Reptile_Anolis\ carolinensis.fa Bird_Gallus\ gallus\ breed\ Red\ Jungle\ fowl.fa Amphibians_Ambystoma\ mexicanum.fa Fish_Danionella\ translucida.fa > 5species.fa
+
+
+MAFFT
+Pengpengs-iMac-Lab2:5speciesMymx trimmed bilab$ mafft
+
+---------------------------------------------------------------------
+
+   MAFFT v7.453 (2019/Nov/8)
+
+        MBE 30:772-780 (2013), NAR 30:3059-3066 (2002)
+        https://mafft.cbrc.jp/alignment/software/
+---------------------------------------------------------------------
+
+Input file? (FASTA format; Folder=/Users/bilab/Desktop/Evolution/5speciesMymx trimmed)
+@ /Users/bilab/Desktop/Evolution/5speciesMymx_trimmed/5species.fa 
+OK. infile = /Users/bilab/Desktop/Evolution/5speciesMymx_trimmed/5species.fa
+
+
+Output file?
+@ /Users/bilab/Desktop/Evolution/5speciesMymx_trimmed/5species_mafft.fa
+OK. outfile = /Users/bilab/Desktop/Evolution/5speciesMymx_trimmed/5species_mafft.fa
+
+
+Output format?
+  1. Clustal format / Sorted
+  2. Clustal format / Input order
+  3. Fasta format   / Sorted
+  4. Fasta format   / Input order
+  5. Phylip format  / Sorted
+  6. Phylip format  / Input order
+@ 4
+OK. arguments = --inputorder
+
+
+Strategy?
+  1. --auto
+  2. FFT-NS-1 (fast)
+  3. FFT-NS-2 (default)
+  4. G-INS-i  (accurate)
+  5. L-INS-i  (accurate)
+  6. E-INS-i  (accurate)
+@ 5
+OK. arguments = --localpair  --maxiterate 16 --inputorder
+
+
+Additional arguments? (--ep # --op # --kappa # etc)
+@ 
+
+command=
+"/usr/local/bin/mafft"  --localpair  --maxiterate 16 --inputorder "/Users/bilab/Desktop/Evolution/5speciesMymx_trimmed/5species.fa" > "/Users/bilab/Desktop/Evolution/5speciesMymx_trimmed/5species_mafft.fa"
+OK?
+@ [Y] Y
+
+
+
+
+Gblocks
+******************************************************
+                    GBLOCKS 0.91b                     
+SELECTION OF CONSERVED BLOCKS FROM MULTIPLE ALIGNMENTS
+        FOR THEIR USE IN PHYLOGENETIC ANALYSIS        
+******************************************************
+
+CURRENT FILE: /Users/bilab/Desktop/Evolution/5speciesMymx_trimmed/5species_mafft.fa
+t. Type Of Sequence: DNA
+
+o. Open File
+
+b. Block Parameters
+
+s. Saving Options
+
+g. Get Blocks
+
+q. Quit
+
+
+Your Choice: b
+
+
+BLOCK PARAMETERS
+
+1. Minimum Number Of Sequences For A Conserved Position: . 4
+2. Minimum Number Of Sequences For A Flank Position: ..... 5
+3. Maximum Number Of Contiguous Nonconserved Positions: .. 8
+4. Minimum Length Of A Block: ............................ 10
+5. Allowed Gap Positions: ................................ None
+
+r. Restore Defaults
+g. Get Blocks
+
+z. Extended Block Options
+m. Go To Main Menu
+
+
+Your Choice: 5
+
+
+BLOCK PARAMETERS
+
+1. Minimum Number Of Sequences For A Conserved Position: . 4
+2. Minimum Number Of Sequences For A Flank Position: ..... 5
+3. Maximum Number Of Contiguous Nonconserved Positions: .. 8
+4. Minimum Length Of A Block: ............................ 10
+5. Allowed Gap Positions: ................................ With Half
+
+r. Restore Defaults
+g. Get Blocks
+
+z. Extended Block Options
+m. Go To Main Menu
+
+
+Your Choice: 4
+
+
+(BIGGER values DECREASE the selected number of positions)
+Minimum Length Of A Block [2 - 32000]: 8
+
+
+BLOCK PARAMETERS
+
+1. Minimum Number Of Sequences For A Conserved Position: . 4
+2. Minimum Number Of Sequences For A Flank Position: ..... 5
+3. Maximum Number Of Contiguous Nonconserved Positions: .. 8
+4. Minimum Length Of A Block: ............................ 8
+5. Allowed Gap Positions: ................................ With Half
+
+r. Restore Defaults
+g. Get Blocks
+
+z. Extended Block Options
+m. Go To Main Menu
+
+
+Your Choice: g
+
+
+/Users/bilab/Desktop/Evolution/5speciesMymx_trimmed/5species_mafft.fa
+Original alignment: 13324 positions
+Gblocks alignment:  3647 positions (27 %) in 141 selected block(s)
+
+BLOCK PARAMETERS
+
+1. Minimum Number Of Sequences For A Conserved Position: . 4
+2. Minimum Number Of Sequences For A Flank Position: ..... 5
+3. Maximum Number Of Contiguous Nonconserved Positions: .. 8
+4. Minimum Length Of A Block: ............................ 8
+5. Allowed Gap Positions: ................................ With Half
+
+r. Restore Defaults
+g. Get Blocks
+
+z. Extended Block Options
+m. Go To Main Menu
+
+Get Phylip from fasta
+#PBS -S /bin/bash
+#PBS -q batch
+#PBS -N JMT
+#PBS -l nodes=1:ppn=4
+#PBS -l walltime=4:00:00
+#PBS -l mem=16gb
+#PBS -M rs14482@uga.edu
+#PBS -m ae
+
+cd $PBS_O_WORKDIR
+
+module load jModelTest/2.1.10r20160303-Java-1.8.0_144
+
+java -jar $EBROOTJMODELTEST/jModelTest.jar -d out_after_gblocks.fa -getPhylip
+
+Run JmodelTest
+
+#PBS -S /bin/bash
+#PBS -q batch
+#PBS -N JMT
+#PBS -l nodes=1:ppn=4
+#PBS -l walltime=4:00:00
+#PBS -l mem=4gb
+#PBS -M rs14482@uga.edu
+#PBS -m ae
+
+cd $PBS_O_WORKDIR
+
+module load jModelTest/2.1.10r20160303-Java-1.8.0_144
+
+java -jar $EBROOTJMODELTEST/jModelTest.jar -tr 4 -d out_after_gblocks.fa -g 4 -s 11 -i -f -AIC -AICc -DT -BIC -a -o JMT.out
+
+
+
+
+Run PhyML get tree
+#PBS -S /bin/bash
+#PBS -N PhyML
+#PBS -q batch
+#PBS -l nodes=1:ppn=4:AMD
+#PBS -l walltime=16:00:00
+#PBS -l mem=20gb
+#PBS -M rs14482@uga.edu
+#PBS -m ae
+
+cd $PBS_O_WORKDIR
+
+module load PhyML/20131016-foss-2016b
+
+time phyml -i out_after_gblocks.fa.phy -d nt -b 1000 -s BEST -o tlr -m 010212 -a 3.14
