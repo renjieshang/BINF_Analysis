@@ -1,0 +1,181 @@
+#2020-9-23 Hagfish
+
+#PBS -S /bin/bash
+#PBS -q highmem_q
+#PBS -N STAR_index_Hagfish
+#PBS -l nodes=1:ppn=4
+#PBS -l walltime=12:00:00
+#PBS -l mem=60gb
+
+#PBS -M renjieshang@uga.edu
+#PBS -m ae
+
+cd $PBS_O_WORKDIR
+
+~/apps/STAR-2.7.2a/bin/STAR \
+--runThreadN 12 \
+--runMode genomeGenerate \
+--genomeDir /scratch/rs14482/workDir/Hagfish/STARIndex_genome \
+--genomeFastaFiles /scratch/rs14482/workDir/Hagfish/GCA_900186335.2_Eburgeri_3.2_genomic.fna \
+--genomeSAindexNbases 14 \
+
+#STARIndex_genome folder should be created prior#
+
+#download by wget
+#PBS -S /bin/bash
+#PBS -q batch
+#PBS -N download
+#PBS -l nodes=1:ppn=4
+#PBS -l walltime=12:00:00
+#PBS -l mem=60gb
+
+#PBS -M renjieshang@uga.edu
+#PBS -m ae
+
+cd $PBS_O_WORKDIR
+
+wget -q ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR523/006/SRR5234496/SRR5234496_1.fastq.gz
+wget -q ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR523/006/SRR5234496/SRR5234496_2.fastq.gz
+…
+##Automapping, no more need to repetitively type in sample number 1 by 1!
+#PBS -S /bin/bash
+#PBS -q highmem_q
+#PBS -N AutomappingERR_test
+#PBS -l nodes=1:ppn=8
+#PBS -l walltime=32:00:00
+#PBS -l mem=100gb
+
+#PBS -m ae
+
+cd $PBS_O_WORKDIR
+
+for ((i=63; i<=80; i++));
+do
+~/apps/STAR-2.7.2a/bin/STAR \
+--genomeDir /scratch/rs14482/workDir/Hagfish/STARIndex_genome \
+--readFilesIn \
+/scratch/rs14482/workDir/Hagfish/fastaq/ERR/ERR20611${i}_1.fastq.gz \
+/scratch/rs14482/workDir/Hagfish/fastaq/ERR/ERR20611${i}_2.fastq.gz \
+--readFilesCommand zcat \
+--runThreadN 20 \
+--outSAMtype BAM SortedByCoordinate \
+--outBAMsortingThreadN 10 \
+--alignEndsType EndToEnd \
+--outSAMstrandField intronMotif \
+--genomeSAindexNbases 14 \
+--limitBAMsortRAM 6000000000000 \
+--outFileNamePrefix ERR20611${i}. \
+done
+
+#samtoolsindex
+#PBS -S /bin/bash
+#PBS -N samtools_index
+#PBS -q batch
+#PBS -l nodes=1:ppn=4:AMD
+#PBS -l walltime=48:00:00
+#PBS -l mem=32gb
+
+#PBS -M renjieshang@uga.edu
+#PBS -m ae
+
+cd $PBS_O_WORKDIR
+
+module load SAMtools/1.6-foss-2016b
+samtools index ERR2061163.Aligned.sortedByCoord.out.bam
+samtools index ERR2061164.Aligned.sortedByCoord.out.bam
+…
+
+##what is the name of Contig FYBX02000112.1?
+#PBS -S /bin/bash
+#PBS -N samtools_Contigname
+#PBS -q batch
+#PBS -l nodes=1:ppn=4:AMD
+#PBS -l walltime=48:00:00
+#PBS -l mem=32gb
+
+#PBS -M renjieshang@uga.edu
+#PBS -m ae
+
+cd $PBS_O_WORKDIR
+
+module load SAMtools/1.6-foss-2016b
+
+samtools idxstats ERR2061163.Aligned.sortedByCoord.out.bam | head -n 20
+
+ 
+
+##extrach each file’s FYBX
+#PBS -S /bin/bash
+#PBS -N samtools_extract
+#PBS -q batch
+#PBS -l nodes=1:ppn=4
+#PBS -l walltime=12:00:00
+#PBS -l mem=60gb
+
+#PBS -M renjieshang@uga.edu
+#PBS -m ae
+
+cd $PBS_O_WORKDIR
+
+module load SAMtools/1.6-foss-2016b
+
+samtools view -b SRR5234495.Aligned.sortedByCoord.out.bam FYBX02000112.1 > SRR5234495_Mymk.bam
+samtools view -b SRR5234496.Aligned.sortedByCoord.out.bam FYBX02000112.1 > SRR5234496_Mymk.bam
+samtools view -b SRR5234497.Aligned.sortedByCoord.out.bam FYBX02000112.1 > SRR5234497_Mymk.bam
+samtools view -b SRR5234498.Aligned.sortedByCoord.out.bam FYBX02000112.1 > SRR5234498_Mymk.bam
+samtools view -b ERR2061163.Aligned.sortedByCoord.out.bam FYBX02000112.1 > ERR2061163_Mymk.bam
+samtools view -b ERR2061164.Aligned.sortedByCoord.out.bam FYBX02000112.1 > ERR2061164_Mymk.bam
+samtools view -b ERR2061165.Aligned.sortedByCoord.out.bam FYBX02000112.1 > ERR2061165_Mymk.bam
+samtools view -b ERR2061166.Aligned.sortedByCoord.out.bam FYBX02000112.1 > ERR2061166_Mymk.bam
+samtools view -b ERR2061167.Aligned.sortedByCoord.out.bam FYBX02000112.1 > ERR2061167_Mymk.bam
+samtools view -b ERR2061168.Aligned.sortedByCoord.out.bam FYBX02000112.1 > ERR2061168_Mymk.bam
+samtools view -b ERR2061169.Aligned.sortedByCoord.out.bam FYBX02000112.1 > ERR2061169_Mymk.bam
+samtools view -b ERR2061170.Aligned.sortedByCoord.out.bam FYBX02000112.1 > ERR2061170_Mymk.bam
+samtools view -b ERR2061171.Aligned.sortedByCoord.out.bam FYBX02000112.1 > ERR2061171_Mymk.bam
+samtools view -b ERR2061172.Aligned.sortedByCoord.out.bam FYBX02000112.1 > ERR2061172_Mymk.bam
+samtools view -b ERR2061173.Aligned.sortedByCoord.out.bam FYBX02000112.1 > ERR2061173_Mymk.bam
+samtools view -b ERR2061174.Aligned.sortedByCoord.out.bam FYBX02000112.1 > ERR2061174_Mymk.bam
+samtools view -b ERR2061175.Aligned.sortedByCoord.out.bam FYBX02000112.1 > ERR2061175_Mymk.bam
+samtools view -b ERR2061176.Aligned.sortedByCoord.out.bam FYBX02000112.1 > ERR2061176_Mymk.bam
+samtools view -b ERR2061177.Aligned.sortedByCoord.out.bam FYBX02000112.1 > ERR2061177_Mymk.bam
+samtools view -b ERR2061178.Aligned.sortedByCoord.out.bam FYBX02000112.1 > ERR2061178_Mymk.bam
+samtools view -b ERR2061179.Aligned.sortedByCoord.out.bam FYBX02000112.1 > ERR2061179_Mymk.bam
+samtools view -b ERR2061180.Aligned.sortedByCoord.out.bam FYBX02000112.1 > ERR2061180_Mymk.bam
+
+#indexFYBX.bam
+
+#10-5-2020 merge 4 SRR samples in 1 group
+#PBS -S /bin/bash
+#PBS -N samtools_merge
+#PBS -q batch
+#PBS -l nodes=1:ppn=4
+#PBS -l walltime=12:00:00
+#PBS -l mem=30gb
+
+#PBS -M renjieshang@uga.edu
+#PBS -m ae
+
+cd $PBS_O_WORKDIR
+
+module load SAMtools/1.6-foss-2016b
+
+samtools merge MergedSRRMymK.bam SRR5234495_Mymk.bam SRR5234496_Mymk.bam SRR5234497_Mymk.bam SRR5234498_Mymk.bam
+
+
+
+#index mergedbam
+#PBS -S /bin/bash
+#PBS -N samtools_indexmerged
+#PBS -q batch
+#PBS -l nodes=1:ppn=4
+#PBS -l walltime=12:00:00
+#PBS -l mem=30gb
+
+#PBS -M renjieshang@uga.edu
+#PBS -m ae
+
+cd $PBS_O_WORKDIR
+
+module load SAMtools/1.6-foss-2016b
+
+samtools index MergedSRRMymK.bam 
