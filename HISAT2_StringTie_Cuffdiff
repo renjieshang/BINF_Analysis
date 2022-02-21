@@ -1,0 +1,152 @@
+#PBS -S /bin/bash
+#PBS -q batch
+#PBS -N HISAT2_mapping_12cells
+#PBS -l nodes=1:ppn=8:AMD
+#PBS -l walltime=36:00:00
+#PBS -l mem=60gb
+
+#PBS -M rs14482@uga.edu
+#PBS -m ae
+
+cd $PBS_O_WORKDIR
+
+module load HISAT2/2.1.0-foss-2016b
+
+hisat2 -p 8 -x /scratch/rs14482/workDir/BiLabRNAseq/mm10/indexes/genome \
+-1 /scratch/rs14482/workDir/BiLabRNAseq/39samples/19117FL-01-01_S101_L005_R1_001.fastq.gz \
+-2 /scratch/rs14482/workDir/BiLabRNAseq/39samples/19117FL-01-01_S101_L005_R2_001.fastq.gz \
+-S 01.sam
+
+hisat2 -p 8 -x /scratch/rs14482/workDir/BiLabRNAseq/mm10/indexes/genome \
+-1 /scratch/rs14482/workDir/BiLabRNAseq/39samples/19117FL-01-02_S102_L005_R1_001.fastq.gz \
+-2 /scratch/rs14482/workDir/BiLabRNAseq/39samples/19117FL-01-02_S102_L005_R2_001.fastq.gz \
+-S 02.sam
+
+
+#PBS -S /bin/bash
+#PBS -q batch
+#PBS -N HISAT2_mapping_14_single_end
+#PBS -l nodes=1:ppn=8:AMD
+#PBS -l walltime=1:00:00
+#PBS -l mem=16gb
+
+#PBS -M rs14482@uga.edu
+#PBS -m ae
+
+cd $PBS_O_WORKDIR
+
+module load HISAT2/2.1.0-foss-2016b
+
+hisat2 -p 8 -x /scratch/rs14482/workDir/BiLabRNAseq/mm10/indexes/genome \
+-U /scratch/rs14482/workDir/BiLabRNAseq/39samples/19117FL-01-14_S114_L005_R1_001.fastq.gz \
+-S 14_NICD2_single.sam
+
+#PBS -S /bin/bash
+#PBS -N samtools_sort
+#PBS -q batch
+#PBS -l nodes=1:ppn=4:AMD
+#PBS -l mem=100gb
+#PBS -l walltime=48:00:00
+#PBS -l mem=16gb
+
+#PBS -M rs14482@uga.edu
+#PBS -m ae
+
+cd $PBS_O_WORKDIR
+
+module load SAMtools/1.6-foss-2016b
+
+samtools sort -@ 8 13_NICD1.bam -o 13_NICD1_sorted.bam
+
+samtools sort -@ 8 14_NICD2.bam -o 14_NICD2_sorted.bam
+
+samtools sort -@ 8 15_NICD3.bam -o 15_NICD3_sorted.bam
+
+samtools sort -@ 8 16_NICD4.bam -o 16_NICD4_sorted.bam
+
+samtools sort -@ 8 17_NICD7.bam -o 17_NICD7_sorted.bam
+
+samtools sort -@ 8 18_NICD11.bam -o 18_NICD11_sorted.bam
+
+samtools sort -@ 8 19_NICD13.bam -o 19_NICD13_sorted.bam
+
+samtools sort -@ 8 01.bam -o 01_sorted.bam
+
+samtools sort -@ 8 02.bam -o 02_sorted.bam
+
+samtools sort -@ 8 03.bam -o 03_sorted.bam
+
+samtools sort -@ 8 04.bam -o 04_sorted.bam
+
+samtools sort -@ 8 05.bam -o 05_sorted.bam
+
+samtools sort -@ 8 07.bam -o 07_sorted.bam
+
+samtools sort -@ 8 08.bam -o 08_sorted.bam
+
+samtools sort -@ 8 09.bam -o 09_sorted.bam
+
+samtools sort -@ 8 10.bam -o 10_sorted.bam
+
+samtools sort -@ 8 11.bam -o 11_sorted.bam
+
+samtools sort -@ 8 12.bam -o 12_sorted.bam
+
+#PBS -S /bin/bash
+#PBS -q batch
+#PBS -N stringtie_assemble_NICD
+#PBS -l nodes=1:ppn=8:AMD
+#PBS -l walltime=12:00:00
+#PBS -l mem=40gb
+
+#PBS -M rs14482@uga.edu
+#PBS -m ae
+
+cd $PBS_O_WORKDIR
+
+module load StringTie/1.3.4d-foss-2016b
+
+stringtie ./13_NICD1_sorted.bam -o 13_transcripts.gtf -G ./annotation/genes.gtf --rf -A ./gene_abund/13.tab
+
+#PBS -S /bin/bash
+#PBS -q batch
+#PBS -N stringtie_merge_NICD
+#PBS -l nodes=1:ppn=8:AMD
+#PBS -l walltime=12:00:00
+#PBS -l mem=40gb
+
+#PBS -M rs14482@uga.edu
+#PBS -m ae
+
+cd $PBS_O_WORKDIR
+
+module load StringTie/1.3.4d-foss-2016b
+
+stringtie --merge -p 8 -G ./annotation/genes.gtf -o stringtie_merged_NICD.gtf ./mergelist.txt
+
+#mergelist.txt
+13_transcripts.gtf
+14_transcripts.gtf
+15_transcripts.gtf
+16_transcripts.gtf
+17_transcripts.gtf
+18_transcripts.gtf
+19_transcripts.gtf
+
+#cuffdiff
+#PBS -S /bin/bash
+#PBS -N DE_genes
+#PBS -q batch
+#PBS -l nodes=1:ppn=8:AMD
+#PBS -l walltime=16:00:00
+#PBS -l mem=40gb
+
+#PBS -M renjieshang@uga.edu
+#PBS -m ae
+
+cd $PBS_O_WORKDIR
+
+cuffdiff -o diff_out_new -b /scratch/rs14482/workDir/BiLabRNAseq/mm10/Genome/genome.fa \
+-p 8 -L WT,Mutant -u stringtie_merged_NICD.gtf \
+15_NICD3_sorted.bam,14_NICD2_sorted.bam,18_NICD11_sorted.bam,17_NICD7_sorted.bam \
+13_NICD1_sorted.bam,16_NICD4_sorted.bam,19_NICD13_sorted.bam \
