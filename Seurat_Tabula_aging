@@ -1,0 +1,47 @@
+##Tabula_aging
+## download facs limb_muscle h5ad file from https://figshare.com/articles/Processed_files_to_use_with_scanpy_/8273102
+## read this file
+> LM_FACS <- ReadH5AD("Limb_Muscle_facs.h5ad")
+> View(LM_FACS@meta.data)
+
+##According to metadata to select desired cells
+##such as age =1or0&&from cell.ontology.class==5
+
+> LMsatt <- subset(LM_FACS, subset = age == c(1, 0) & cell.ontology.class == 5)
+##check original metadata file download from https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSM4505405
+>#we know age1 is 24m, age0 is 3m
+>#cell.ontology.class: 0 is B cell, 1 is T cell, 2 is endothelial cell, 3 is macrophage, 4 is mesenchymal stem cell, 5 is skeletal muscle satellite cell
+> LMsatt
+An object of class Seurat 
+22899 features across 577 samples within 1 assay 
+Active assay: RNA (22899 features)
+##assign cell ident by age
+> Idents(object = LMsatt) <- LMsatt@meta.data$'age'
+> levels(LMsatt)
+[1] "1" "0"
+##normalize and scale data
+> LMsatt <- NormalizeData(LMsatt, normalization.method = "LogNormalize", scale.factor = 10000)
+Performing log-normalization
+0%   10   20   30   40   50   60   70   80   90   100%
+[----|----|----|----|----|----|----|----|----|----|
+**************************************************|
+> LMsatt <- ScaleData(LMsatt)
+Centering and scaling data matrix
+  |===========================================================================================================| 100%
+> all.genes <- rownames(LMsatt)
+> LMsatt <- ScaleData(LMsatt, features = all.genes)
+Centering and scaling data matrix
+  |===========================================================================================================| 100%
+##find DE genes
+> satt_aging_makers <- FindAllMarkers(LMsatt, only.pos = TRUE, min.pct = 0.25, logfc.threshold = 0.25)
+Calculating cluster 1
+  |++++++++++++++++++++++++++++++++++++++++++++++++++| 100% elapsed=03s  
+Calculating cluster 0
+  |++++++++++++++++++++++++++++++++++++++++++++++++++| 100% elapsed=09s  
+> View(satt_aging_makers)
+> VlnPlot(LMsatt, features = c("Gsn", "Rps29", "Chodl", "Plagl1", "Bdkrb1", "Rpl13a", "Fosl1", combine = T))
+ 
+> RidgePlot(LMsatt, features = c("Gsn", "Rps29", "Chodl", "Plagl1", "Bdkrb1", "Rpl13a", "Fosl1"))
+ 
+> write.csv(satt_aging_makers, file = " GSM4505405_satellitecell_aging_DE.csv")
+> saveRDS(LM_FACS, file = "~/Desktop/single_cell/Tabula_aging/LM_FACS.rds")
