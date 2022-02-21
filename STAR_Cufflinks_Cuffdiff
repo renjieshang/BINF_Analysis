@@ -1,0 +1,127 @@
+#STAR mapping
+#PBS -S /bin/bash
+#PBS -q batch
+#PBS -N STAR_mapping
+#PBS -l nodes=1:ppn=4
+#PBS -l walltime=12:00:00
+#PBS -l mem=60gb
+
+#PBS -M renjieshang@uga.edu
+#PBS -m ae
+
+cd $PBS_O_WORKDIR
+
+~/apps/STAR-2.7.2a/bin/STAR \
+--genomeDir /scratch/rs14482/workDir/BiLabRNAseq/mm9/STARIndex \
+--readFilesIn \
+/scratch/rs14482/workDir/BiLabRNAseq/39samples/19117FL-01-01_S101_L005_R1_001.fastq.gz \
+/scratch/rs14482/workDir/BiLabRNAseq/39samples/19117FL-01-01_S101_L005_R2_001.fastq.gz \
+--runThreadN 20 \
+--outFileNamePrefix 01. \
+--outSAMunmapped Within \
+--chimSegmentMin 20 \
+--outBAMsortingThreadN 10 \
+--outSAMtype BAM SortedByCoordinate \
+--readFilesCommand zcat \
+--genomeLoad NoSharedMemory \
+--outFilterIntronMotifs RemoveNoncanonical \
+--limitBAMsortRAM 60000000000
+
+
+
+#cufflinks to get FPKM
+
+Don’t use moduleload:
+###cufflinks to calculate FPKM
+#PBS -S /bin/bash
+#PBS -q batch
+#PBS -N cufflinks_01
+#PBS -l nodes=1:ppn=4:AMD
+#PBS -l walltime=48:00:00
+#PBS -l mem=20gb
+
+#PBS -M renjieshang@uga.edu
+#PBS -m ae
+
+cd $PBS_O_WORKDIR
+
+cufflinks -u -p 8 \
+--max-bundle-frags 1000000000 \
+--no-effective-length-correction \
+--compatible-hits-norm \
+-G /scratch/rs14482/workDir/BiLabRNAseq/mm9/annotation/genes.gtf \
+/scratch/rs14482/workDir/BiLabRNAseq/mm9/01/01.Aligned.sortedByCoord.out.bam \
+-o /scratch/rs14482/workDir/BiLabRNAseq/fpkm1.1 \
+--library-type fr-firststrand
+
+Use module load:
+###cufflinks to calculate FPKM
+#PBS -S /bin/bash
+#PBS -q batch
+#PBS -N cufflinks_01
+#PBS -l nodes=1:ppn=4:AMD
+#PBS -l walltime=48:00:00
+#PBS -l mem=20gb
+
+#PBS -M renjieshang@uga.edu
+#PBS -m ae
+
+cd $PBS_O_WORKDIR
+
+module load Cufflinks/2.2.1-foss-2016b
+cufflinks -u -p 8 \
+--max-bundle-frags 1000000000 \
+--no-effective-length-correction \
+--compatible-hits-norm \
+-G /scratch/rs14482/workDir/BiLabRNAseq/mm9/annotation/genes.gtf \
+/scratch/rs14482/workDir/BiLabRNAseq/mm9/01/01.Aligned.sortedByCoord.out.bam \
+-o /scratch/rs14482/workDir/BiLabRNAseq/fpkm1 \
+--library-type fr-firststrand
+
+
+Assemblies.txt:
+/scratch/rs14482/workDir/BiLabRNAseq/fpkm2/transcripts.gtf
+/scratch/rs14482/workDir/BiLabRNAseq/fpkm3/transcripts.gtf
+/scratch/rs14482/workDir/BiLabRNAseq/fpkm7/transcripts.gtf
+/scratch/rs14482/workDir/BiLabRNAseq/fpkm1/transcripts.gtf
+/scratch/rs14482/workDir/BiLabRNAseq/fpkm4/transcripts.gtf
+/scratch/rs14482/workDir/BiLabRNAseq/fpkm11/transcripts.gtf
+/scratch/rs14482/workDir/BiLabRNAseq/fpkm13/transcripts.gtf
+
+
+#Cuffmerge to merge replicates Should not use moduleload but just cufflink…
+#cuffmerge
+#PBS -S /bin/bash
+#PBS -q highmem_q
+#PBS -l nodes=1:ppn=1:HIGHMEM
+#PBS -l walltime=24:00:00
+#PBS -l mem=40gb
+
+#PBS -M renjieshang@uga.edu
+#PBS -m ae
+
+cd $PBS_O_WORKDIR
+
+module load Cufflinks/2.2.1-foss-2016b
+cuffmerge -g /scratch/rs14482/workDir/BiLabRNAseq/mm9/annotation/genes.gtf \
+-s /scratch/rs14482/workDir/BiLabRNAseq/mm9/Genome/genome.fa \
+ -p 8 /scratch/rs14482/workDir/BiLabRNAseq/assemblies.txt
+
+#Cuffdiff to call sig diff genes
+                                                                                                                                                                                                                                                               
+#cuffdiff
+#PBS -S /bin/bash
+#PBS -q highmem_q
+#PBS -l nodes=1:ppn=8
+#PBS -l walltime=36:00:00
+#PBS -l mem=40gb
+
+#PBS -M renjieshang@uga.edu
+#PBS -m ae
+
+cd $PBS_O_WORKDIR
+
+cuffdiff -o diff_out -b /scratch/rs14482/workDir/BiLabRNAseq/mm9/Genome/genome.fa \
+-p 8 -L MLC1,MLC2 -u /scratch/rs14482/workDir/BiLabRNAseq/merged_asm/merged.gtf \
+/scratch/rs14482/workDir/BiLabRNAseq/mm9/02/02.Aligned.sortedByCoord.out.bam,/scratch/rs14482/workDir/BiLabRNAseq/mm9/03/03.Aligned.sortedByCoord.out.bam,/scratch/rs14482/workDir/BiLabRNAseq/mm9/07/07.Aligned.sortedByCoord.out.bam \
+/scratch/rs14482/workDir/BiLabRNAseq/mm9/01/01.Aligned.sortedByCoord.out.bam,/scratch/rs14482/workDir/BiLabRNAseq/mm9/04/04.Aligned.sortedByCoord.out.bam,/scratch/rs14482/workDir/BiLabRNAseq/mm9/11/11.Aligned.sortedByCoord.out.bam,/scratch/rs14482/workDir/BiLabRNAseq/mm9/13/13.Aligned.sortedByCoord.out.bam
