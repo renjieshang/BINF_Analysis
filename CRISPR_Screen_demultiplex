@@ -1,0 +1,43 @@
+#!/bin/bash
+#SBATCH --job-name=Library456789_denultiplex
+#SBATCH --mail-type=ALL
+#SBATCH --mail-user=renjieshang@uga.edu
+#SBATCH --ntasks=1
+#SBATCH --partition=highmem_p
+#SBATCH --cpus-per-task=8
+#SBATCH --mem=80gb
+#SBATCH --time=36:00:00
+#SBATCH --output=demultiplex.%j.out
+#SBATCH --error=demultiplex.%j.err
+cd $SLURM_SUBMIT_DIR
+
+#"^" means matched strings needs to be at beginning, "$" instead means matched string needs to be at the end;
+#-B1 means keep 1 line that locates beneath the matched line, -A2 means keep 2 lines that locate above the matched line;
+
+grep  --no-group-separator -B1 -A2 "^TAAGTAGAGTCTTGTGGAAAGGACGAAACACCG" /RENJIE/Undetermined_S0_L001_R1_001.fastq > 10T.C1.fastq
+grep  --no-group-separator -B1 -A2 "^ATACACGATCTCTTGTGGAAAGGACGAAACACCG" /RENJIE/Undetermined_S0_L001_R1_001.fastq > 10T.C2.fastq
+grep  --no-group-separator -B1 -A2 "^GATCGCGCGGTTCTTGTGGAAAGGACGAAACACCG" /RENJIE/Undetermined_S0_L001_R1_001.fastq > 10T.C3.fastq
+grep  --no-group-separator -B1 -A2 "^CGATCATGATCGTCTTGTGGAAAGGACGAAACACCG" /RENJIE/Undetermined_S0_L001_R1_001.fastq > 10T.E1.fastq
+grep  --no-group-separator -B1 -A2 "^TCGATCGTTACCATCTTGTGGAAAGGACGAAACACCG" /RENJIE/Undetermined_S0_L001_R1_001.fastq > 10T.E2.fastq
+grep  --no-group-separator -B1 -A2 "^ATCGATTCCTTGGTTCTTGTGGAAAGGACGAAACACCG" /RENJIE/Undetermined_S0_L001_R1_001.fastq > 10T.E3.fastq
+grep  --no-group-separator -B1 -A2 "^GATCGATAACGCATTTCTTGTGGAAAGGACGAAACACCG" /RENJIE/Undetermined_S0_L001_R1_001.fastq > K1.C1.fastq
+grep  --no-group-separator -B1 -A2 "^CGATCGATACAGGTATTCTTGTGGAAAGGACGAAACACCG" /RENJIE/Undetermined_S0_L001_R1_001.fastq > K1.C2.fastq
+grep  --no-group-separator -B1 -A2 "^ACGATCGATAGGTAAGGTCTTGTGGAAAGGACGAAACACCG" /RENJIE/Undetermined_S0_L001_R1_001.fastq > K1.C3.fastq
+grep  --no-group-separator -B1 -A2 "^TAACAATGGTCTTGTGGAAAGGACGAAACACCG" /RENJIE/Undetermined_S0_L001_R1_001.fastq > K1.E1.fastq
+grep  --no-group-separator -B1 -A2 "^ATACTGTATCTCTTGTGGAAAGGACGAAACACCG" /RENJIE/Undetermined_S0_L001_R1_001.fastq > K1.E2.fastq
+grep  --no-group-separator -B1 -A2 "^GATAGGTCGCATCTTGTGGAAAGGACGAAACACCG" /RENJIE/Undetermined_S0_L001_R1_001.fastq > K1.E3.fastq
+grep  --no-group-separator -B1 -A2 "^GCCTCTCGAGAAAGCCATCTTGTGGAAAGGACGAAACACCG" /RENJIE/Undetermined_S0_L001_R1_001.fastq > D1.C1.fastq
+grep  --no-group-separator -B1 -A2 "^TGGGCTATCAGACACCATCTTGTGGAAAGGACGAAACACCG" /RENJIE/Undetermined_S0_L001_R1_001.fastq > D1.C2.fastq
+grep  --no-group-separator -B1 -A2 "^CGCTCGATCAGAGCCAACTCTTGTGGAAAGGACGAAACACCG" /RENJIE/Undetermined_S0_L001_R1_001.fastq > D1.C3.fastq
+grep  --no-group-separator -B1 -A2 "^TCCAGTCTCGAAGCGACCCTCTTGTGGAAAGGACGAAACACCG" /RENJIE/Undetermined_S0_L001_R1_001.fastq > D1.E1.fastq
+grep  --no-group-separator -B1 -A2 "^ACTGAGCGCAATAGAACACCTCTTGTGGAAAGGACGAAACACCG" /RENJIE/Undetermined_S0_L001_R1_001.fastq > D1.E2.fastq
+grep  --no-group-separator -B1 -A2 "^CTCTATCGCGGACACAAATCCCTCTTGTGGAAAGGACGAAACACCG" /RENJIE/Undetermined_S0_L001_R1_001.fastq > D1.E3.fastq
+grep  --no-group-separator -B1 -A2 "^ATCTTGTGGAAAGGACGAAACACCG" /RENJIE/Undetermined_S0_L001_R1_001.fastq > A16.C1.fastq
+grep  --no-group-separator -B1 -A2 "^TTATCTTGTGGAAAGGACGAAACACCG" /RENJIE/Undetermined_S0_L001_R1_001.fastq > A16.C2.fastq
+grep  --no-group-separator -B1 -A2 "^CTTTCTTGTGGAAAGGACGAAACACCG" /RENJIE/Undetermined_S0_L001_R1_001.fastq > A16.C3.fastq
+grep  --no-group-separator -B1 -A2 "^GAGATCTTGTGGAAAGGACGAAACACCG" /RENJIE/Undetermined_S0_L001_R1_001.fastq > A16.E1.fastq
+grep  --no-group-separator -B1 -A2 "^CGCTCTCTTGTGGAAAGGACGAAACACCG" /RENJIE/Undetermined_S0_L001_R1_001.fastq > A16.E2.fastq
+grep  --no-group-separator -B1 -A2 "^CGACCTCTTGTGGAAAGGACGAAACACCG" /RENJIE/Undetermined_S0_L001_R1_001.fastq > A16.E3.fastq
+
+#count how many reads
+grep -c '@' 1.fastq
