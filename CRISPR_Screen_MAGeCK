@@ -1,0 +1,48 @@
+##RRA module
+
+module load MAGeCK/0.5.9.5-foss-2020b-Python-3.8.6
+
+#K1 analysis
+
+mageck count -l Human12348guides.txt -n K1 --sample-label "C1,C2,C3,E1,E2,E3" --fastq K1.C1.fastq K1.C2.fastq K1.C3.fastq K1.E1.fastq K1.E2.fastq K1.E3.fastq --pdf-report
+
+mageck test -k K1.count.txt -t E1,E2,E3 -c C1,C2,C3 -n K1 --pdf-report
+
+Rscript *.R
+
+#D1 analysis
+
+mageck count -l Human12348guides.txt -n D1 --sample-label "C1,C2,C3,E1,E2,E3" --fastq D1.C1.fastq D1.C2.fastq D1.C3.fastq D1.E1.fastq D1.E2.fastq D1.E3.fastq --pdf-report
+
+mageck test -k D1.count.txt -t E1,E2,E3 -c C1,C2,C3 -n D1 --pdf-report
+
+Rscript *.R
+
+#A16 analysis
+
+mageck count -l Human12348guides.txt -n A16 --sample-label "C1,C2,C3,E1,E2,E3" --fastq A16.C1.fastq A16.C2.fastq A16.C3.fastq A16.E1.fastq A16.E2.fastq A16.E3.fastq --pdf-report
+
+mageck test -k A16.count.txt -t E1,E2,E3 -c C1,C2,C3 -n A16 --pdf-report
+
+Rscript *.R
+
+##MLE module for time series
+##design matrxi as below
+Samples	baseline	Time1	Time2	Time3	Time4
+PC1.1	1	0	0	0	0
+PC1.2	1	0	0	0	0
+PC1.3	1	0	0	0	0
+PC2.1	1	1	0	0	0
+PC2.2	1	1	0	0	0
+PC2.3	1	1	0	0	0
+PC3.1	1	0	1	0	0
+PC3.2	1	0	1	0	0
+PC3.3	1	0	1	0	0
+PC4.1	1	0	0	1	0
+PC4.2	1	0	0	1	0
+PC4.3	1	0	0	1	0
+PC5.1	1	0	0	0	1
+PC5.2	1	0	0	0	1
+PC5.3	1	0	0	0	1
+
+mageck mle -k Proliferation_count.count.txt -d designmatrix_MLE.txt -n Proliferation_MLE
