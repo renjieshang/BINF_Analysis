@@ -1,0 +1,88 @@
+pip install scanpy
+pip install pandas
+pip install anndata
+import scanpy as sc
+import pandas as pd
+import anndata as ad
+import os
+import numpy as np
+adata = sc.read_h5ad('/Users/srj/Desktop/DataAnalysis/CRISPRscreen/Nature2023/adata_skm_lineage_20210916.h5ad')
+adata
+pip install louvain
+types = adata.obs['celltype']
+types
+AACACGTGTCAGAAGC-5386STDY7537944            PAX3+MyoProg
+AACCGCGGTCTTTCAT-5386STDY7537944            PAX3+MyoProg
+AACGTTGGTTCGTTGA-5386STDY7537944                   MyoB1
+AACTGGTCATCCGCGA-5386STDY7537944       PAX3+PAX7+MyoProg
+AAGGCAGGTATTACCG-5386STDY7537944       PAX3+PAX7+MyoProg
+                                             ...        
+TTGACTTTCTGCGTAA-WSSS_THYst9384958                 MyoB2
+TTGCGTCTCAGGCGAA-WSSS_THYst9384958     PAX3+PAX7+MyoProg
+TTGTAGGAGATATGGT-WSSS_THYst9384958                 MyoB2
+TTTACTGGTCTCGTTC-WSSS_THYst9384958             MYH3+MyoC
+TTTGCGCCACGGTGTC-WSSS_THYst9384958    PAX7+SPON2+MyoProg
+Name: celltype, Length: 12376, dtype: category
+Categories (10, object): ['PAX3+MyoProg' < 'PAX3+PAX7+MyoProg' < 'PAX7+SPON2+MyoProg' < 'PAX7+NTN5+MyoProg' ... 'MYH3+MyoC' < 'MyoB2' < 'MyoC2' < 'MYL3+MyoC']
+sc.pl.highest_expr_genes(adata, n_top=20) 
+sc.pl.draw_graph(adata, color='celltype', legend_loc='on data')
+sc.pl.heatmap(adata, ['PAX3','ID1','ID2','ID3','HEY1','MSC','HES1','PAX7','NTN5','SPON2','RGS4','FST','NEFM','SAMD11','MYH3','MYOD1','MYOG','CCER2','RGR','KRT31','TNFSF13B','MYLPF','TNNT3','MYL3','MB'], groupby='celltype',)
+adata.obs['tissue']
+AACACGTGTCAGAAGC-5386STDY7537944      LowerLimb
+AACCGCGGTCTTTCAT-5386STDY7537944      LowerLimb
+AACGTTGGTTCGTTGA-5386STDY7537944      LowerLimb
+AACTGGTCATCCGCGA-5386STDY7537944      LowerLimb
+AAGGCAGGTATTACCG-5386STDY7537944      LowerLimb
+                                        ...    
+TTGACTTTCTGCGTAA-WSSS_THYst9384958    LowerLimb
+TTGCGTCTCAGGCGAA-WSSS_THYst9384958    LowerLimb
+TTGTAGGAGATATGGT-WSSS_THYst9384958    LowerLimb
+TTTACTGGTCTCGTTC-WSSS_THYst9384958    LowerLimb
+TTTGCGCCACGGTGTC-WSSS_THYst9384958    LowerLimb
+Name: tissue, Length: 12376, dtype: category
+Categories (2, object): ['LowerLimb', 'UpperLimb']
+group1 = ['MyoB1', 'MYH3+MyoC']
+adata_subset1 = adata[adata.obs['celltype'].isin(group1)]
+adata_subset1
+adata_subset1.obs['celltype']
+sc.tl.rank_genes_groups(adata_subset1, 'celltype', method='wilcoxon')
+sc.pl.rank_genes_groups(adata_subset1, n_genes=35, sharey=False)
+sc.pl.violin(adata_subset1, ['NPM1','HNRNPA1','TNNC1','MYH3'], groupby='celltype')
+sc.get.rank_genes_groups_df(adata_subset1, group="MyoB1")
+df = sc.get.rank_genes_groups_df(adata_subset1, group="MyoB1")
+df.to_csv("/Users/srj/Desktop/DataAnalysis/CRISPRscreen/Nature2023/B1_vs_MYH3&MyoC.csv")
+#你还可以单独比较某两个cluster的差异基因：
+
+#比如cluster 0和1：
+
+sc.tl.rank_genes_groups(adata, 'celltype', groups=['MyoB1'], reference='MYH3+MyoC', method='wilcoxon')
+
+sc.pl.rank_genes_groups(adata, groups=['MyoB1'], n_genes=35)
+#结果一致
+#以后就可以这样比了，不用单独创建sub adata
+#比如myob2和myh3
+
+sc.tl.rank_genes_groups(adata, 'celltype', groups=['MyoB2'], reference='MYH3+MyoC', method='wilcoxon')
+sc.pl.rank_genes_groups(adata, groups=['MyoB2'], n_genes=35)
+#反过来看一下
+sc.tl.rank_genes_groups(adata, 'celltype', groups=['MYH3+MyoC'], reference='MyoB2', method='wilcoxon')
+sc.pl.rank_genes_groups(adata, groups=['MYH3+MyoC'], n_genes=35)
+##检查一下上述差异基因是否各在列表的尾首
+##注意此时的环境变量是myh3比myob2，而非107步
+sc.get.rank_genes_groups_df(adata, group='MYH3+MyoC')
+names	scores	logfoldchanges	pvals	pvals_adj
+0	TNNC1	21.916821	9.914712	1.795701e-106	2.518097e-102
+1	MYH3	21.914276	9.118387	1.898874e-106	2.518097e-102
+2	MYL1	21.861492	8.131099	6.043688e-106	5.343023e-102
+3	TTN	21.726509	7.561390	1.152390e-104	6.416255e-101
+4	TNNC2	21.724283	7.941656	1.209610e-104	6.416255e-101
+...	...	...	...	...	...
+26517	PFN1	-17.249800	-1.276637	1.122863e-66	3.384155e-64
+26518	MEST	-17.728363	-2.642309	2.533015e-70	8.612900e-68
+26519	HNRNPA1	-18.119799	-1.240052	2.224062e-73	8.674496e-71
+26520	NPM1	-18.406778	-1.197018	1.159178e-75	5.300641e-73
+26521	PTMA	-19.749296	-2.103685	8.134222e-87	5.393396e-84
+26522 rows × 5 columns
+##保存表格，注意记得反向排列score才是myob2比myh3！
+df2 = sc.get.rank_genes_groups_df(adata, group="MYH3+MyoC")
+df2.to_csv("/Users/srj/Desktop/DataAnalysis/CRISPRscreen/Nature2023/B2_vs_MYH3&MyoC.csv")##名字暂时这么叫，要记得改排序
