@@ -92,9 +92,9 @@ group2 = ['MyoB1','MyoB2','MyoC1','MyoC2','MYL3+MyoC', 'MYH3+MyoC']
 adata_subset2 = adata[adata.obs['celltype'].isin(group2)]
 sc.pl.draw_graph(adata_subset2, color='celltype', legend_loc='on data')
 sc.pl.draw_graph(adata_subset2, color='DRAP1', legend_loc='on data')
-sc.pl.heatmap(adata_subset2, ['DRAP1','CUL3','DR1','NAA38','TCF12','MYOD1','MYMK','MIB1','MYC','HUWE1','MYF5','C16orf72','MAPK14','SMARCD1','STK11','ACTR2','RAC1','EP300','FOSL2'], groupby='celltype')
-sc.pl.stacked_violin(adata_subset2, ['DRAP1','CUL3','DR1','NAA38','TCF12','MYOD1','MYMK','MIB1','MYC','HUWE1','MYF5','C16orf72','MAPK14','SMARCD1','STK11','ACTR2','RAC1','EP300','FOSL2'], groupby='celltype', swap_axes=False, dendrogram=True)
-sc.pl.tracksplot(adata_subset2, ['DRAP1','CUL3','DR1','NAA38','TCF12','MYOD1','MYMK','MIB1','MYC','HUWE1','MYF5','C16orf72','MAPK14','SMARCD1','STK11','ACTR2','RAC1','EP300','FOSL2'], groupby='celltype',dendrogram=True, colorbar_title='mean z-score', vmin=-2, vmax=2, cmap='RdBu_r') 
+sc.pl.heatmap(adata_subset2, ['MYMX'], groupby='celltype')
+sc.pl.stacked_violin(adata_subset2, ['MYMX'], groupby='celltype', swap_axes=False, dendrogram=True)
+sc.pl.tracksplot(adata_subset2, ['MYMX'], groupby='celltype',dendrogram=True, colorbar_title='mean z-score', vmin=-2, vmax=2, cmap='RdBu_r') 
 
 #根据细胞分群来计算差异基因，相当于Seurat里的metadata
 ###B1B2 vs C1C2
