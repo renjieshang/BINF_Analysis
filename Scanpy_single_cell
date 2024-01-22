@@ -91,7 +91,7 @@ df2.to_csv("/Users/srj/Desktop/DataAnalysis/CRISPRscreen/Nature2023/B2_vs_MYH3&M
 group2 = ['MyoB1','MyoB2','MyoC1','MyoC2','MYL3+MyoC', 'MYH3+MyoC']
 adata_subset2 = adata[adata.obs['celltype'].isin(group2)]
 sc.pl.draw_graph(adata_subset2, color='celltype', legend_loc='on data')
-sc.pl.draw_graph(adata_subset2, color='DRAP1', legend_loc='on data')
+sc.pl.draw_graph(adata_subset2, color='MYOD1', legend_loc='on data')
 sc.pl.heatmap(adata_subset2, ['MYMX'], groupby='celltype')
 sc.pl.stacked_violin(adata_subset2, ['MYMX'], groupby='celltype', swap_axes=False, dendrogram=True)
 sc.pl.tracksplot(adata_subset2, ['MYMX'], groupby='celltype',dendrogram=True, colorbar_title='mean z-score', vmin=-2, vmax=2, cmap='RdBu_r') 
