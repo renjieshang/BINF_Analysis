@@ -119,20 +119,6 @@ Categories (8, object): ['PAX3+MyoProg' < 'PAX3+PAX7+MyoProg' < 'PAX7+SPON2+MyoP
 sc.tl.rank_genes_groups(adata,'B1B2C1C2',groups=['B1B2'], reference='C1C2',method='wilcoxon')
 sc.get.rank_genes_groups_df(adata,'B1B2')
 
-names	scores	logfoldchanges	pvals	pvals_adj
-0	PTMA	37.686844	1.301331	0.000000e+00	0.000000e+00
-1	MEST	36.139221	2.275149	5.494739e-286	2.428858e-282
-2	GPC3	30.642014	2.792587	3.376362e-206	3.581915e-203
-3	MDK	30.332561	2.353760	4.267103e-202	4.191559e-199
-4	IGFBP5	29.275787	3.105407	2.109487e-188	1.695388e-185
-...	...	...	...	...	...
-26517	ACTC1	-36.003521	-2.963856	7.368114e-284	2.791673e-280
-26518	RASSF4	-36.774578	-2.503988	4.706782e-296	2.496665e-292
-26519	SEPT4	-37.727283	-3.354564	0.000000e+00	0.000000e+00
-26520	MYOG	-37.844891	-2.551809	0.000000e+00	0.000000e+00
-26521	SELENOW	-40.640636	-2.631406	0.000000e+00	0.000000e+00
-26522 rows × 5 columns
-
 sc.pl.violin(adata, ['PTMA','MEST','MYOG','SELENOW'], groupby='B1B2C1C2', rotation=90)
 dfB1B2C1C2 = sc.get.rank_genes_groups_df(adata, 'B1B2')
 dfB1B2C1C2.to_csv("/Users/srj/Desktop/DataAnalysis/CRISPRscreen/Nature2023/B1B2_vs_C1C2.csv")
