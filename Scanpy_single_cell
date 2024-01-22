@@ -95,3 +95,77 @@ sc.pl.draw_graph(adata_subset2, color='DRAP1', legend_loc='on data')
 sc.pl.heatmap(adata_subset2, ['DRAP1','CUL3','DR1','NAA38','TCF12','MYOD1','MYMK','MIB1','MYC','HUWE1','MYF5','C16orf72','MAPK14','SMARCD1','STK11','ACTR2','RAC1','EP300','FOSL2'], groupby='celltype')
 sc.pl.stacked_violin(adata_subset2, ['DRAP1','CUL3','DR1','NAA38','TCF12','MYOD1','MYMK','MIB1','MYC','HUWE1','MYF5','C16orf72','MAPK14','SMARCD1','STK11','ACTR2','RAC1','EP300','FOSL2'], groupby='celltype', swap_axes=False, dendrogram=True)
 sc.pl.tracksplot(adata_subset2, ['DRAP1','CUL3','DR1','NAA38','TCF12','MYOD1','MYMK','MIB1','MYC','HUWE1','MYF5','C16orf72','MAPK14','SMARCD1','STK11','ACTR2','RAC1','EP300','FOSL2'], groupby='celltype',dendrogram=True, colorbar_title='mean z-score', vmin=-2, vmax=2, cmap='RdBu_r') 
+
+#根据细胞分群来计算差异基因，相当于Seurat里的metadata
+###B1B2 vs C1C2
+#原来的分群（celltype）不会消失/被替代，而是在obs下新建了一个分类方式：B1B2C1C2
+adata.obs['B1B2C1C2'] = adata.obs['celltype'].replace({'MyoB1':'B1B2','MyoB2':'B1B2','MyoC1':'C1C2','MyoC2':'C1C2'})
+adata.obs['B1B2C1C2']
+AACACGTGTCAGAAGC-5386STDY7537944            PAX3+MyoProg
+AACCGCGGTCTTTCAT-5386STDY7537944            PAX3+MyoProg
+AACGTTGGTTCGTTGA-5386STDY7537944                    B1B2
+AACTGGTCATCCGCGA-5386STDY7537944       PAX3+PAX7+MyoProg
+AAGGCAGGTATTACCG-5386STDY7537944       PAX3+PAX7+MyoProg
+                                             ...        
+TTGACTTTCTGCGTAA-WSSS_THYst9384958                  B1B2
+TTGCGTCTCAGGCGAA-WSSS_THYst9384958     PAX3+PAX7+MyoProg
+TTGTAGGAGATATGGT-WSSS_THYst9384958                  B1B2
+TTTACTGGTCTCGTTC-WSSS_THYst9384958             MYH3+MyoC
+TTTGCGCCACGGTGTC-WSSS_THYst9384958    PAX7+SPON2+MyoProg
+Name: B1B2C1C2, Length: 12376, dtype: category
+Categories (8, object): ['PAX3+MyoProg' < 'PAX3+PAX7+MyoProg' < 'PAX7+SPON2+MyoProg' < 'PAX7+NTN5+MyoProg' < 'B1B2' < 'C1C2' < 'MYH3+MyoC' < 'MYL3+MyoC']
+
+##以b1b2/c1c2来找de genes，与其他细胞无关
+sc.tl.rank_genes_groups(adata,'B1B2C1C2',groups=['B1B2'], reference='C1C2',method='wilcoxon')
+sc.get.rank_genes_groups_df(adata,'B1B2')
+
+names	scores	logfoldchanges	pvals	pvals_adj
+0	PTMA	37.686844	1.301331	0.000000e+00	0.000000e+00
+1	MEST	36.139221	2.275149	5.494739e-286	2.428858e-282
+2	GPC3	30.642014	2.792587	3.376362e-206	3.581915e-203
+3	MDK	30.332561	2.353760	4.267103e-202	4.191559e-199
+4	IGFBP5	29.275787	3.105407	2.109487e-188	1.695388e-185
+...	...	...	...	...	...
+26517	ACTC1	-36.003521	-2.963856	7.368114e-284	2.791673e-280
+26518	RASSF4	-36.774578	-2.503988	4.706782e-296	2.496665e-292
+26519	SEPT4	-37.727283	-3.354564	0.000000e+00	0.000000e+00
+26520	MYOG	-37.844891	-2.551809	0.000000e+00	0.000000e+00
+26521	SELENOW	-40.640636	-2.631406	0.000000e+00	0.000000e+00
+26522 rows × 5 columns
+
+sc.pl.violin(adata, ['PTMA','MEST','MYOG','SELENOW'], groupby='B1B2C1C2', rotation=90)
+dfB1B2C1C2 = sc.get.rank_genes_groups_df(adata, 'B1B2')
+dfB1B2C1C2.to_csv("/Users/srj/Desktop/DataAnalysis/CRISPRscreen/Nature2023/B1B2_vs_C1C2.csv")
+
+###B1B2 vs PAX，same thing：
+#Replace 'cell_pop_1', 'cell_pop_2' with your actual cell population labels.
+adata.obs['B1B2PAX'] = adata.obs['celltype'].replace({'MyoB1':'B1B2','MyoB2':'B1B2','PAX3+MyoProg':'PAX','PAX3+PAX7+MyoProg':'PAX','PAX7+SPON2+MyoProg':'PAX','PAX7+NTN5+MyoProg':'PAX'})
+adata.obs['B1B2PAX']
+
+AACACGTGTCAGAAGC-5386STDY7537944            PAX
+AACCGCGGTCTTTCAT-5386STDY7537944            PAX
+AACGTTGGTTCGTTGA-5386STDY7537944           B1B2
+AACTGGTCATCCGCGA-5386STDY7537944            PAX
+AAGGCAGGTATTACCG-5386STDY7537944            PAX
+                                        ...    
+TTGACTTTCTGCGTAA-WSSS_THYst9384958         B1B2
+TTGCGTCTCAGGCGAA-WSSS_THYst9384958          PAX
+TTGTAGGAGATATGGT-WSSS_THYst9384958         B1B2
+TTTACTGGTCTCGTTC-WSSS_THYst9384958    MYH3+MyoC
+TTTGCGCCACGGTGTC-WSSS_THYst9384958          PAX
+Name: B1B2PAX, Length: 12376, dtype: category
+Categories (6, object): ['PAX' < 'B1B2' < 'MyoC1' < 'MYH3+MyoC' < 'MyoC2' < 'MYL3+MyoC']
+
+sc.tl.rank_genes_groups(adata,'B1B2PAX',groups=['PAX'], reference='B1B2',method='wilcoxon')
+sc.get.rank_genes_groups_df(adata,'PAX')
+sc.pl.violin(adata, ['PEG10','MSC','CKB','PFN1'], groupby='B1B2PAX', rotation=90)
+dfB1B2PAX = sc.get.rank_genes_groups_df(adata, 'PAX') ##注意此处是以pax比b1b2
+dfB1B2PAX.to_csv("/Users/srj/Desktop/DataAnalysis/CRISPRscreen/Nature2023/PAX_vs_B1B2.csv")
+
+##最终看看确实obs末尾多了两个我们自定义的分群方式：b1b2c1c2和b1b2pax
+AnnData object with n_obs × n_vars = 12376 × 26522
+    obs: 'batch', 'percent_mito', 'n_counts', 'n_genes', 'bh_pval', 'region', 'tissue', 'adj_stage', 'adj_sample', 'leiden', 'S_score', 'G2M_score', 'phase', 'predicted_labels', 'celltype', 'B1B2C1C2', 'B1B2PAX'
+    var: 'gene_ids', 'feature_types', 'n_cells', 'highly_variableWSSS_THYst8796437', 'highly_variableWSSS_THYst8796442', 'highly_variable5478STDY7935101', 'highly_variable5478STDY7935102', 'highly_variableWSSS_THYst8796439', 'highly_variableWSSS_THYst9384956', 'highly_variable5478STDY7717491', 'highly_variableWSSS_THYst9384953', 'highly_variable5478STDY7717492', 'highly_variableWSSS_THYst9384955', 'highly_variable5386STDY7537944', 'highly_variableWSSS_THYst9384954', 'highly_variableFCAImmP7536759', 'highly_variable5478STDY7980349', 'highly_variableWSSS_THYst8796438', 'highly_variable5478STDY7652318', 'highly_variableWSSS_THYst8796441', 'highly_variableFCAImmP7536758', 'highly_variableWSSS_THYst9384957', 'highly_variable5478STDY7980348', 'highly_variable5386STDY7557337', 'highly_variable5386STDY7557336', 'highly_variableWSSS_THYst9384958', 'highly_variableWSSS_THYst8796440', 'highly_variable5386STDY7557335', 'highly_variable_n', 'highly_variable'
+    uns: 'adj_stage_colors', 'batch_colors', 'celltype_colors', 'celltype_sizes', 'diffmap_evals', 'draw_graph', 'leiden', 'leiden_R_colors', 'leiden_colors', 'leiden_sizes', 'log1p', 'majority_voting_colors', 'marker_m_leiden_R_celltype', 'markers_celltype', 'markers_new_celltype', 'neighbors', 'paga', 'pca', 'phase_colors', 'pre-annotation_colors', 'rank_genes_groups', 'region_colors', 'tissue_colors', 'umap', 'B1B2C1C2_colors', 'B1B2PAX_colors'
+    obsm: 'X_draw_graph_fa'
+    obsp: 'connectivities', 'distances'
