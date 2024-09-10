@@ -150,3 +150,82 @@ red_de_top60 <- c(res_de_up_top30_id, res_de_dw_top30_id)
 write.table(as.data.frame(red_de_top60),file = "GMvsDM7day_Top60.txt", row.names = F, col.names = F )
 save.image("GMvsDM7day.Rdata")
 savehistory("~/Desktop/Data Analysis/RNA-seq/featureCount/GMvsDM7day/Bestcode.Rhistory")
+
+
+
+
+##If want to do multiple comparisons in the merged count matrix (e.g. disease/control-treatment), check codes below:
+
+setwd("~/Desktop/DataAnalysis/RNA-seq/Fosl1_18samples/Featurecounts/Exp10302021")
+library(DESeq2)
+countData <- as.matrix(read.csv("Exp10_Fosl1_featurecounts_goodformat.csv", row.names="Geneid"))
+condition <- factor(c("WTN","WTI","KON","KOI","KON","KOI","WTN","WTI"))
+coldata <- data.frame(row.names = colnames(countData), condition)
+coldata
+condition
+dds<-DESeqDataSetFromMatrix(countData,coldata,design = ~condition)
+head(dds)
+dds<-DESeq(dds)
+resultsNames(dds)
+resI<-results(dds, contrast = c("condition","KOI","WTI"))
+resultsNames(dds)
+summary(resI)
+resI <- resI[order(resI$padj),]
+summary(resI)
+resIdata <- merge(as.data.frame(resI),as.data.frame(counts(dds,normalize=TRUE)),by="row.names",sort=FALSE)
+View(resIdata)
+resN<-results(dds, contrast = c("condition","KON","WTN"))
+resultsNames(dds)
+summary(resN)
+resNdata <- merge(as.data.frame(resN),as.data.frame(counts(dds,normalize=TRUE)),by="row.names",sort=FALSE)
+View(resNdata)
+resNdata<-data.frame(resNdata)
+library(biomaRt)
+library(stringr)
+resIdata$Row.names = unlist(str_split(resIdata$Row.names,"[.]",simplify=T))[,1]
+resNdata$Row.names = unlist(str_split(resNdata$Row.names,"[.]",simplify=T))[,1]
+genesI <- c(resIdata$Row.names)
+genesN <- c(resNdata$Row.names)
+ensembl <- useMart('ensembl', dataset = 'mmusculus_gene_ensembl')
+annotI <- getBM(
+attributes = c(
+'mgi_symbol',
+'external_gene_name',
+'ensembl_gene_id',
+'entrezgene_id',
+'gene_biotype'),
+filters = 'ensembl_gene_id',
+values = genesI,
+mart = ensembl)
+annotN <- getBM(
+attributes = c(
+'mgi_symbol',
+'external_gene_name',
+'ensembl_gene_id',
+'entrezgene_id',
+'gene_biotype'),
+filters = 'ensembl_gene_id',
+values = genesN,
+mart = ensembl)
+annotI <- merge(
+x = as.data.frame(genesI),
+y =  annotI,
+by.y = 'ensembl_gene_id',
+all.x = T,
+by.x = 'genesI')
+annotN <- merge(
+x = as.data.frame(genesN),
+y =  annotN,
+by.y = 'ensembl_gene_id',
+all.x = T,
+by.x = 'genesN')
+annotI
+idI <- match(resIdata$Row.names , annotI$genesI)
+idN <- match(resNdata$Row.names , annotN$genesN)
+resIdata$Symbol <- annotI$external_gene_name[idI]
+resNdata$Symbol <- annotN$external_gene_name[idN]
+write.table(resIdata, file="Exp10_KOinjured_vs_WTinjured.csv",sep = ",", col.names = T, row.names = F)
+write.table(resNdata, file="Exp10_KONoninjured_vs_WTNoninjured.csv",sep = ",", col.names = T, row.names = F)
+rld <- rlog(dds, blind=TRUE)
+DESeq2::plotPCA(rld)
+savehistory("~/Desktop/DataAnalysis/RNA-seq/Fosl1_18samples/Featurecounts/Exp10302021/RhistoryExp10.Rhistory")
