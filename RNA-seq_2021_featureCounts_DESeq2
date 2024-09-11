@@ -1,4 +1,196 @@
+##Human and Mouse genome/annottaion files are downloaded from GENECODE
+##DO NOT DOWNLOAD PRE-BUILT INDEX FROM WEBSITE!!!
+##Rename fastq files as i_R1_001, i_R2_001
+##Hisat2-StringTie-Ballgown/EdgeR pipeline
+##Build hisat2 genome index:
+
+#!/bin/bash
+#SBATCH --job-name=j_HISAT2_humanindex
+#SBATCH --mail-type=ALL
+#SBATCH --mail-user=renjieshang@uga.edu
+#SBATCH --ntasks=1
+#SBATCH --partition=highmem_p
+#SBATCH --cpus-per-task=4
+#SBATCH --mem=100gb
+#SBATCH --time=24:00:00
+#SBATCH --output=HISAT2humanindex.%j.out
+#SBATCH --error=HISAT2humanindex.%j.err
+cd $SLURM_SUBMIT_DIR
+
+ml HISAT2/2.1.0-foss-2019b
+
+hisat2-build /lustre2/scratch/rs14482/workDir/BiLabRNAseq/Genomes/GRCh38.p13.genome.fa humanht2
+
+##Alignment & output to bam & sort bam & build bam index:
+#!/bin/bash
+#SBATCH --job-name=j_HISAT2_1
+#SBATCH --mail-type=ALL
+#SBATCH --mail-user=renjieshang@uga.edu
+#SBATCH --ntasks=4
+#SBATCH --partition=highmem_p
+#SBATCH --cpus-per-task=4
+#SBATCH --mem=100gb
+#SBATCH --time=12:00:00
+#SBATCH --output=j_HISAT2_1.%j.out
+#SBATCH --error=j_HISAT2_1.%j.err
+cd $SLURM_SUBMIT_DIR
+
+for ((i=1;i<=8;i++));
+do
+
+ml HISAT2/2.1.0-foss-2019b
+ml SAMtools/1.10-GCC-8.3.0
+
+hisat2 -p 16 --rna-strandness RF --dta -x /lustre2/scratch/rs14482/workDir/BiLabRNAseq/H_hisat2index/humanht2 -1 /lustre2/scratch/rs14482/workDir/BiLabRNAseq/Human/${i}_R1_001.fastq.gz -2 /lustre2/scratch/rs14482/workDir/BiLabRNAseq/Human/${i}_R2_001.fastq.gz | samtools view -bSh - > ${i}.bam
+samtools sort ${i}.bam -o ${i}.sorted.bam
+samtools index ${i}.sorted.bam
+
+done
+
+##For mouse
+
+#!/bin/bash
+#SBATCH --job-name=j_HISAT2_1
+#SBATCH --mail-type=ALL
+#SBATCH --mail-user=renjieshang@uga.edu
+#SBATCH --ntasks=4
+#SBATCH --partition=highmem_p
+#SBATCH --cpus-per-task=8
+#SBATCH --mem=100gb
+#SBATCH --time=36:00:00
+#SBATCH --output=j_HISAT2_1.%j.out
+#SBATCH --error=j_HISAT2_1.%j.err
+cd $SLURM_SUBMIT_DIR
+
+for ((i=1,k=14;i<=3,k<=16;i++,k++))
+do
+
+ml HISAT2/2.1.0-foss-2019b
+ml SAMtools/1.10-GCC-8.3.0
+
+hisat2 -p 16 --rna-strandness RF --dta -x /lustre2/scratch/rs14482/workDir/BiLabRNAseq/m_HISAT2_Index/mouseht2 -1 /lustre2/scratch/rs14482/workDir/BiLabRNAseq/Fosl1/19117R-03-${i}_S${k}_L001_R1_001.fastq.gz -2 /lustre2/scratch/rs14482/workDir/BiLabRNAseq/Fosl1/19117R-03-${i}_S${k}_L001_R2_001.fastq.gz | samtools view -bSh - > ${i}.bam
+samtools sort ${i}.bam -o ${i}.sorted.bam
+samtools index ${i}.sorted.bam
+
+done
+
+##In contrast to getting abundance file by merged.gtf file, can directly get abundance file using standard annotation file:
+#!/bin/bash
+#SBATCH --job-name=Fosl1TPM
+#SBATCH --partition=highmem_p
+#SBATCH --mail-type=ALL
+#SBATCH --mail-user=renjieshang@uga.edu
+#SBATCH --ntasks=4
+#SBATCH --mem=100gb
+#SBATCH --time=24:00:00
+#SBATCH --output=TPM.%j.out
+#SBATCH --error=TPM.%j.err
+cd $SLURM_SUBMIT_DIR
+
+for ((i=1;i<=18;i++));
+do
+
+ml StringTie/2.1.1-GCC-8.3.0
+
+stringtie ${i}.sorted.bam -G /lustre2/scratch/rs14482/workDir/BiLabRNAseq/Annotation/gencode.vM25.annotation_GRCm38.p6.gff3 --rf -A ./gene_abund/${i}.tab
+
+done
+
+
+##StringTie assemble transcript & output aboundance file with TPM/FPKM (-A) & output Ballgown (-e -B) file for each sample:
+##transcript file already contains FPKM and TPM data...
+
+#!/bin/bash
+#SBATCH --job-name=Human_final
+#SBATCH --partition=highmem_p
+#SBATCH --mail-type=ALL
+#SBATCH --mail-user=renjieshang@uga.edu
+#SBATCH --ntasks=4
+#SBATCH --mem=200gb
+#SBATCH --time=24:00:00
+#SBATCH --output=Human_final.%j.out
+#SBATCH --error=Human_final.%j.err
+cd $SLURM_SUBMIT_DIR
+
+ml StringTie/2.1.1-GCC-8.3.0
+
+stringtie 1.sorted.bam -o ballgown1/1_final.gtf -p 16 -A -e -B -G /lustre2/scratch/rs14482/workDir/BiLabRNAseq/H_hisat2results/stringtie_mergedHuman.gtf
+stringtie 2.sorted.bam -o ballgown2/2_final.gtf -p 16 -A -e -B -G /lustre2/scratch/rs14482/workDir/BiLabRNAseq/H_hisat2results/stringtie_mergedHuman.gtf
+stringtie 3.sorted.bam -o ballgown3/3_final.gtf -p 16 -A -e -B -G /lustre2/scratch/rs14482/workDir/BiLabRNAseq/H_hisat2results/stringtie_mergedHuman.gtf
+stringtie 4.sorted.bam -o ballgown4/4_final.gtf -p 16 -A -e -B -G /lustre2/scratch/rs14482/workDir/BiLabRNAseq/H_hisat2results/stringtie_mergedHuman.gtf
+stringtie 5.sorted.bam -o ballgown5/5_final.gtf -p 16 -A -e -B -G /lustre2/scratch/rs14482/workDir/BiLabRNAseq/H_hisat2results/stringtie_mergedHuman.gtf
+stringtie 6.sorted.bam -o ballgown6/6_final.gtf -p 16 -A -e -B -G /lustre2/scratch/rs14482/workDir/BiLabRNAseq/H_hisat2results/stringtie_mergedHuman.gtf
+stringtie 7.sorted.bam -o ballgown7/7_final.gtf -p 16 -A -e -B -G /lustre2/scratch/rs14482/workDir/BiLabRNAseq/H_hisat2results/stringtie_mergedHuman.gtf
+stringtie 8.sorted.bam -o ballgown8/8_final.gtf -p 16 -A -e -B -G /lustre2/scratch/rs14482/workDir/BiLabRNAseq/H_hisat2results/stringtie_mergedHuman.gtf
+
+
+##If have intetrest in novel isoform, then need to finish standard procedure: merge-gffcompare-get gtf again;
+##Otherwise can just use Ballgown to do analysis;
+##Alternatively, can use each generated gtf file to extract HYPOTHESISED COUNTS to do EdgeR/DESeq2:
+
+wget http://ccb.jhu.edu/software/stringtie/dl/prepDE.py3
+module load Python/3.8.2-GCCcore-8.3.0
+python prepDE.py3 -i <the folder that contains all needed .gtf file>
+
+##get specific chrom bam file
+#!/bin/bash
+#SBATCH --job-name=chr19
+#SBATCH --mail-type=ALL
+#SBATCH --mail-user=renjieshang@uga.edu
+#SBATCH --ntasks=4
+#SBATCH --partition=highmem_p
+#SBATCH --cpus-per-task=4
+#SBATCH --mem=100gb
+#SBATCH --time=12:00:00
+#SBATCH --output=chr19.%j.out
+#SBATCH --error=chr19.%j.err
+cd $SLURM_SUBMIT_DIR
+
+for ((i=1;i<=18;i++));
+do
+
+ml SAMtools/1.10-GCC-8.3.0
+
+samtools view -b ${i}.sorted.bam chr19 > ${i}chr19.sorted.bam
+samtools index ${i}chr19.sorted.bam
+
+done
+
+##The output is "gene_count_matrix.csv", can change name and use DESeq2 to do analysis:
+##Learned from https://blog.csdn.net/Candle_light/article/details/81953176
+
+library(DESeq2)
+countData <- as.matrix(read.csv("Mouse_gene_count_matrix.csv", row.names="gene_id"))
+condition <- factor(c("WT","WT","WT","KO","KO"))
+coldata <- data.frame(row.names = colnames(countData), condition)
+coldata
+condition
+dds<-DESeqDataSetFromMatrix(countData,coldata,design = ~condition)
+head(dds)
+dds<-DESeq(dds)
+resultsNames(dds)
+res<-results(dds)
+summary(res)
+plotMA(res,ylim=c(-2,2))
+mcols(res,use.names = TRUE)
+plot(res$log2FoldChange,res$pvalue)
+res <- res[order(res$padj),]
+resdata <- merge(as.data.frame(res),as.data.frame(counts(dds,normalize=TRUE)),by="row.names",sort=FALSE)
+deseq_res<-data.frame(resdata)
+write.csv(deseq_res, "DESeq2_mouse.csv")
+savehistory("~/Desktop/Data Analysis/RNA-seq/DE_by_PrepDE_DESeq2/Mouse_DESeq2.Rhistory")
+saveRDS(dds, "mouseDESeq.rds")
+savehistory("~/Desktop/Data Analysis/RNA-seq/DE_by_PrepDE_DESeq2/Mouse_DESeq_fromStringtie.Rhistory")
+
+##Above we use HYPOTHESISED COUNTS from StringTie to do the analysis by DESeq2;
+##Output Ballgown files can also be used;
+
+
+
 ##Now use featureCounts to get raw reads count from sorted.bam, use mouse data as example:
+
+
+##Mouse
 
 #!/bin/bash
 #SBATCH --job-name=Mousefeaturecounts
@@ -15,10 +207,37 @@ cd $SLURM_SUBMIT_DIR
 
 ml Subread/2.0.1-GCC-8.3.0
 
-featureCounts -p -T 16 -t exon -g gene_id -a /lustre2/scratch/rs14482/workDir/BiLabRNAseq/Annotation/gencode.vM25.annotation_GRCm38.p6.gff3 -o M_featurecounts.txt \
+featureCounts -p -T 16 -t exon -g gene_id -s 2 -a /lustre2/scratch/rs14482/workDir/BiLabRNAseq/Annotation/gencode.vM25.annotation_GRCm38.p6.gff3 -o M_featurecounts.txt \
 9.sorted.bam 10.sorted.bam 11.sorted.bam 12.sorted.bam 13.sorted.bam
 
+##Human
+
+
+#!/bin/bash
+#SBATCH --job-name=Humanfeaturecounts
+#SBATCH --mail-type=ALL
+#SBATCH --mail-user=renjieshang@uga.edu
+#SBATCH --ntasks=4
+#SBATCH --partition=highmem_p
+#SBATCH --cpus-per-task=4
+#SBATCH --mem=60gb
+#SBATCH --time=12:00:00
+#SBATCH --output=Humanfeaturecounts.%j.out
+#SBATCH --error=Humanfeaturecounts.%j.err
+cd $SLURM_SUBMIT_DIR
+
+for ((i=1; i<=8; i++));
+do
+
+ml Subread/2.0.1-GCC-8.3.0
+featureCounts -p -T 16 -t exon -g gene_id -s 2 -a /lustre2/scratch/rs14482/workDir/BiLabRNAseq/Annotation/gencode.v38.annotation_GRCh38.p13.gff3 -o H_featurecounts${i}.txt \
+${i}.sorted.bam
+done
+
+
 ##For generated .txt file, remove header and location columns, only keep Geneid and bams with counts, new file is named M/H_featurecounts_goodformat.csv
+##!!!BE careful about大基因的坐标过多以至于串行导致误删数据造成na报错
+##解决办法，排序表达列数据找到没有数据的基因名
 ##Use DESeq2...R packages to get DE genes, ID transform, vocanolplot, GO;
 
 ##Mouse part:
@@ -41,4 +260,401 @@ resdata <- merge(as.data.frame(res),as.data.frame(counts(dds,normalize=TRUE)),by
 View(resdata)
 deseq_res<-data.frame(resdata)
 
+
+###if there are multiple groups need to compare, such as WT, KO, Injured and noninjured:
+library(DESeq2)
+countData <- as.matrix(read.csv("Exp10_Fosl1_featurecounts_goodformat.csv", row.names="Geneid"))
+condition <- factor(c("WTN","WTI","KON","KOI","KON","KOI","WTN","WTI"))
+coldata <- data.frame(row.names = colnames(countData), condition)
+coldata
+condition
+dds<-DESeqDataSetFromMatrix(countData,coldata,design = ~condition)
+head(dds)
+dds<-DESeq(dds)
+resultsNames(dds)
+resI<-results(dds, contrast = c("condition","KOI","WTI"))
+resultsNames(dds)
+summary(resI)
+resI <- resI[order(resI$padj),]
+summary(resI)
+resIdata <- merge(as.data.frame(resI),as.data.frame(counts(dds,normalize=TRUE)),by="row.names",sort=FALSE)
+View(resIdata)
+resN<-results(dds, contrast = c("condition","KON","WTN"))
+resultsNames(dds)
+summary(resN)
+resNdata <- merge(as.data.frame(resN),as.data.frame(counts(dds,normalize=TRUE)),by="row.names",sort=FALSE)
+View(resNdata)
+resNdata<-data.frame(resNdata)
+library(biomaRt)
+library(stringr)
+resIdata$Row.names = unlist(str_split(resIdata$Row.names,"[.]",simplify=T))[,1]
+resNdata$Row.names = unlist(str_split(resNdata$Row.names,"[.]",simplify=T))[,1]
+genesI <- c(resIdata$Row.names)
+genesN <- c(resNdata$Row.names)
+ensembl <- useMart('ensembl', dataset = 'mmusculus_gene_ensembl')
+annotI <- getBM(
+attributes = c(
+'mgi_symbol',
+'external_gene_name',
+'ensembl_gene_id',
+'entrezgene_id',
+'gene_biotype'),
+filters = 'ensembl_gene_id',
+values = genesI,
+mart = ensembl)
+annotN <- getBM(
+attributes = c(
+'mgi_symbol',
+'external_gene_name',
+'ensembl_gene_id',
+'entrezgene_id',
+'gene_biotype'),
+filters = 'ensembl_gene_id',
+values = genesN,
+mart = ensembl)
+annotI <- merge(
+x = as.data.frame(genesI),
+y =  annotI,
+by.y = 'ensembl_gene_id',
+all.x = T,
+by.x = 'genesI')
+annotN <- merge(
+x = as.data.frame(genesN),
+y =  annotN,
+by.y = 'ensembl_gene_id',
+all.x = T,
+by.x = 'genesN')
+annotI
+idI <- match(resIdata$Row.names , annotI$genesI)
+idN <- match(resNdata$Row.names , annotN$genesN)
+resIdata$Symbol <- annotI$external_gene_name[idI]
+resNdata$Symbol <- annotN$external_gene_name[idN]
+write.table(resIdata, file="Exp10_KOinjured_vs_WTinjured.csv",sep = ",", col.names = T, row.names = F)
+write.table(resNdata, file="Exp10_KONoninjured_vs_WTNoninjured.csv",sep = ",", col.names = T, row.names = F)
+rld <- rlog(dds, blind=TRUE)
+DESeq2::plotPCA(rld)
+> setwd("~/Desktop/DataAnalysis/RNA-seq/Fosl1_18samples/Featurecounts/Exp02232022")
+> countData <- as.matrix(read.csv("Exp02_Fosl1_featurecounts_goodformat.csv", row.names="Geneid"))
+> condition <- factor(c("WTN","WTI","WTN","WTI","WTN","WTI","KON","KOI","KON","KOI"))
+> coldata <- data.frame(row.names = colnames(countData), condition)
+> coldata
+               condition
+X9.sorted.bam        WTN
+X10.sorted.bam       WTI
+X11.sorted.bam       WTN
+X12.sorted.bam       WTI
+X13.sorted.bam       WTN
+X14.sorted.bam       WTI
+X15.sorted.bam       KON
+X16.sorted.bam       KOI
+X17.sorted.bam       KON
+X18.sorted.bam       KOI
+> condition
+ [1] WTN WTI WTN WTI WTN WTI KON KOI KON KOI
+Levels: KOI KON WTI WTN
+> dds<-DESeqDataSetFromMatrix(countData,coldata,design = ~condition)
+> head(dds)
+class: DESeqDataSet
+dim: 6 10
+metadata(1): version
+assays(1): counts
+rownames(6): ENSMUSG00000102693.1 ENSMUSG00000064842.1 ... ENSMUSG00000103377.1 ENSMUSG00000104017.1
+rowData names(0):
+colnames(10): X9.sorted.bam X10.sorted.bam ... X17.sorted.bam X18.sorted.bam
+colData names(1): condition
+> dds<-DESeq(dds)
+estimating size factors
+estimating dispersions
+gene-wise dispersion estimates
+mean-dispersion relationship
+final dispersion estimates
+fitting model and testing
+> resultsNames(dds)
+[1] "Intercept"            "condition_KON_vs_KOI" "condition_WTI_vs_KOI" "condition_WTN_vs_KOI"
+> resI<-results(dds, contrast = c("condition","KOI","WTI"))
+> resultsNames(dds)
+[1] "Intercept"            "condition_KON_vs_KOI" "condition_WTI_vs_KOI" "condition_WTN_vs_KOI"
+> summary(resI)
+
+out of 35506 with nonzero total read count
+adjusted p-value < 0.1
+LFC > 0 (up)       : 65, 0.18%
+LFC < 0 (down)     : 333, 0.94%
+outliers [1]       : 17, 0.048%
+low counts [2]     : 16702, 47%
+(mean count < 5)
+[1] see 'cooksCutoff' argument of ?results
+[2] see 'independentFiltering' argument of ?results
+
+> resI <- resI[order(resI$padj),]
+> resIdata <- merge(as.data.frame(resI),as.data.frame(counts(dds,normalize=TRUE)),by="row.names",sort=FALSE)
+> resN<-results(dds, contrast = c("condition","KON","WTN"))
+> resN <- resN[order(resN$padj),]
+> resultsNames(dds)
+[1] "Intercept"            "condition_KON_vs_KOI" "condition_WTI_vs_KOI" "condition_WTN_vs_KOI"
+> summary(resN)
+
+out of 35506 with nonzero total read count
+adjusted p-value < 0.1
+LFC > 0 (up)       : 12, 0.034%
+LFC < 0 (down)     : 5, 0.014%
+outliers [1]       : 17, 0.048%
+low counts [2]     : 14030, 40%
+(mean count < 2)
+[1] see 'cooksCutoff' argument of ?results
+[2] see 'independentFiltering' argument of ?results
+
+> resNdata <- merge(as.data.frame(resN),as.data.frame(counts(dds,normalize=TRUE)),by="row.names",sort=FALSE)
+> resIdata$Row.names = unlist(str_split(resIdata$Row.names,"[.]",simplify=T))[,1]
+> resNdata$Row.names = unlist(str_split(resNdata$Row.names,"[.]",simplify=T))[,1]
+> genesI <- c(resIdata$Row.names)
+> genesN <- c(resNdata$Row.names)
+> ensembl <- useMart('ensembl', dataset = 'mmusculus_gene_ensembl')
+> annotI <- getBM(
++ attributes = c(
++ 'mgi_symbol',
++ 'external_gene_name',
++ 'ensembl_gene_id',
++ 'entrezgene_id',
++ 'gene_biotype'),
++ filters = 'ensembl_gene_id',
++ values = genesI,
++ mart = ensembl)
+> annotN <- getBM(
++ attributes = c(
++ 'mgi_symbol',
++ 'external_gene_name',
++ 'ensembl_gene_id',
++ 'entrezgene_id',
++ 'gene_biotype'),
++ filters = 'ensembl_gene_id',
++ values = genesN,
++ mart = ensembl)
+> annotI <- merge(
++ x = as.data.frame(genesI),
++ y =  annotI,
++ by.y = 'ensembl_gene_id',
++ all.x = T,
++ by.x = 'genesI')
+> annotN <- merge(
++ x = as.data.frame(genesN),
++ y =  annotN,
++ by.y = 'ensembl_gene_id',
++ all.x = T,
++ by.x = 'genesN')
+> idI <- match(resIdata$Row.names , annotI$genesI)
+> idN <- match(resNdata$Row.names , annotN$genesN)
+> resIdata$Symbol <- annotI$external_gene_name[idI]
+> resNdata$Symbol <- annotN$external_gene_name[idN]
+> write.table(resIdata, file="Exp02_KOinjured_vs_WTinjured.csv",sep = ",", col.names = T, row.names = F)
+> write.table(resNdata, file="Exp02_KONoninjured_vs_WTNoninjured.csv",sep = ",", col.names = T, row.names = F)
+> rld <- rlog(dds, blind=TRUE)
+> DESeq2::plotPCA(rld)
+> library(ggplot2)
+> plotPCA(rld) + geom_text(aes(label=name),vjust=2) ##Add sample label
+savehistory("~/Desktop/DataAnalysis/RNA-seq/Fosl1_18samples/Featurecounts/Exp10302021/RhistoryExp10.Rhistory")
+
 ##DE is done, now do gene id transform to get gene Symbol:
+
+library(biomaRt)
+library(stringr)
+deseq_res$Row.names = unlist(str_split(deseq_res$Row.names,"[.]",simplify=T))[,1]
+genes <- c(deseq_res$Row.names)
+ensembl <- useMart('ensembl', dataset = 'mmusculus_gene_ensembl')
+annot <- getBM(
+attributes = c(
+'mgi_symbol',
+'external_gene_name',
+'ensembl_gene_id',
+'entrezgene_id',
+'gene_biotype'),
+filters = 'ensembl_gene_id',
+values = genes,
+mart = ensembl)
+annot <- merge(
+x = as.data.frame(genes),
+y =  annot,
+by.y = 'ensembl_gene_id',
+all.x = T,
+by.x = 'genes')
+annot
+id <- match(deseq_res$Row.names , annot$genes)
+deseq_res$Symbol <- annot$external_gene_name[id]
+View(deseq_res)
+write.table(deseq_res, file="Mouse_DE_featureCounts.csv",sep = ",", col.names = T, row.names = F)
+
+##id transform is done, now make some plots:
+
+rld <- rlog(dds, blind=TRUE)
+DESeq2::plotPCA(rld)
+rld_mat <- assay(rld)
+rld_cor <- cor(rld_mat)
+library(pheatmap)
+pheatmap(rld_cor)
+BiocManager::install('EnhancedVolcano')
+library(EnhancedVolcano)
+
+##If want to invert fold change, then do: deseq_res$invert_log2FoldChange <- (deseq_res$log2FoldChange)*(-1)
+
+EnhancedVolcano(res,
+lab = deseq_res$Symbol,
+x = 'log2FoldChange',
+y = 'pvalue')
+res_de_up <- subset(deseq_res, deseq_res$log2FoldChange>=1)
+res_de_dw <- subset(deseq_res, deseq_res$log2FoldChange<=(-1)*1)
+res_de_up_top30_id <- as.vector(head(res_de_up$Symbol,30))
+res_de_dw_top30_id <- as.vector(head(res_de_dw$Symbol,30))
+red_de_top60 <- c(res_de_up_top30_id, res_de_dw_top30_id)
+write.table(as.data.frame(red_de_top60),file = "mouse_Top60.txt", row.names = F, col.names = F )
+
+##To do GO analysis, need ensemble gene id transform to entrezID:
+
+View(deseq_res)
+library(dplyr)
+padj_cutoff <- 0.05
+sig_res <- dplyr::filter(deseq_res, padj < padj_cutoff) %>% dplyr::arrange(padj)
+View(sig_res)
+top20_sig_genes <- sig_res %>%
+dplyr::arrange(padj) %>%
+head(n=20)
+View(top20_sig_genes)
+library(biomaRt)
+mart=mart)
+genes <- getBM(
+filters="ensembl_gene_id",
+attributes = c("ensembl_gene_id", "entrezgene_id"),
+values=sig_res$Row.names,
+mart=mart)
+View(genes)
+View(sig_res)
+id <- match(sig_res$Row.names , genes$ensembl_gene_id)
+sig_res$entrezID <- genes$entrezgene_id[id]
+library(clusterProfiler)
+library("org.Mm.eg.db")
+library(TxDb.Mmusculus.UCSC.mm10.knownGene)
+ego <- enrichGO(gene = sig_res$entrezID,
+keyType = "ENTREZID",
+OrgDb = org.Mm.eg.db,
+ont = "BP",
+pAdjustMethod = "BH",
+qvalueCutoff = 0.05,
+readable = TRUE)
+dotplot(ego, showCategory=50)
+savehistory("~/Desktop/DataAnalysis/RNA-seq/featureCount/Mouse/GO.Rhistory")
+saveimage...
+
+
+
+
+##Human part:
+setwd("~/Desktop/Data Analysis/RNA-seq/featureCount/GMvsDM7day")
+library(DESeq2)
+countData <- as.matrix(read.csv("GMvsDM7day_featurecounts_goodformat.csv", row.names="Geneid"))
+condition <- factor(c("GM","GM","DM7day","DM7day"))
+coldata <- data.frame(row.names = colnames(countData), condition)
+coldata
+condition
+dds<-DESeqDataSetFromMatrix(countData,coldata,design = ~condition)
+head(dds)
+dds<-DESeq(dds)
+resultsNames(dds)
+res<-results(dds)
+summary(res)
+res <- res[order(res$padj),]
+summary(res)
+resdata <- merge(as.data.frame(res),as.data.frame(counts(dds,normalize=TRUE)),by="row.names",sort=FALSE)
+View(resdata)
+deseq_res<-data.frame(resdata)
+library(biomaRt)
+library(stringr)
+deseq_res$Row.names = unlist(str_split(deseq_res$Row.names,"[.]",simplify=T))[,1]
+genes <- c(deseq_res$Row.names)
+ensembl <- useMart('ensembl', dataset = 'hsapiens_gene_ensembl')
+annot <- getBM(
+attributes = c(
+'external_gene_name',
+'ensembl_gene_id',
+'entrezgene_id',
+'gene_biotype'),
+filters = 'ensembl_gene_id',
+values = genes,
+mart = ensembl)
+annot <- merge(
+x = as.data.frame(genes),
+y =  annot,
+by.y = 'ensembl_gene_id',
+all.x = T,
+by.x = 'genes')
+annot
+id <- match(deseq_res$Row.names , annot$genes)
+deseq_res$Symbol <- annot$external_gene_name[id]
+View(deseq_res)
+write.table(deseq_res, file="GMvsDM7day_DE_featureCounts.csv",sep = ",", col.names = T, row.names = F)
+rld <- rlog(dds, blind=TRUE)
+DESeq2::plotPCA(rld)
+library(ggplot2)
+DESeq2::plotPCA(rld)
+DESeq2::plotPCA(rld, ntop = 500)
+DESeq2::plotPCA(rld, ntop = 5000)
+DESeq2::plotPCA(rld, ntop = 10000)
+rld_mat <- assay(rld)
+rld_cor <- cor(rld_mat)
+library(pheatmap)
+pheatmap(rld_cor)
+library(EnhancedVolcano)
+EnhancedVolcano(res,
+lab = deseq_res$Symbol,
+x = 'log2FoldChange',
+y = 'pvalue')
+res_de_up <- subset(deseq_res, deseq_res$log2FoldChange>=1)
+res_de_dw <- subset(deseq_res, deseq_res$log2FoldChange<=(-1)*1)
+res_de_up_top30_id <- as.vector(head(res_de_up$Symbol,30))
+res_de_dw_top30_id <- as.vector(head(res_de_dw$Symbol,30))
+red_de_top60 <- c(res_de_up_top30_id, res_de_dw_top30_id)
+write.table(as.data.frame(red_de_top60),file = "GMvsDM7day_Top60.txt", row.names = F, col.names = F )
+save.image("GMvsDM7day.Rdata")
+savehistory("~/Desktop/Data Analysis/RNA-seq/featureCount/GMvsDM7day/Bestcode.Rhistory")
+
+
+##Modification of some plots
+> EnhancedVolcano(resIdata,
++                 lab = resIdata$Symbol,
++                 x = 'log2FoldChange',
++                 y = 'padj', pCutoff = 0.05, FCcutoff = 1, pointSize = 1, labSize = 3, selectLab = c("Mymk","Mymx","Pax7", "Myod1","Myog"), drawConnectors = T, boxedLabels = T)
+
+> EnhancedVolcano(resIdata,
+Warning messages:
++                 lab = resIdata$Symbol,
++                 x = 'invert_log2FoldChange',
++                 y = 'padj', pCutoff = 0.05, FCcutoff = 1, pointSize = 1, labSize = 3, selectLab = c("Mymk","Mymx","Pax7", "Myod1","Myog","Dclk1","Gadd45g","Lrp4","Fgfr4","Rbm24","Myf5","Chrnd","Dll1","Bex2","Chrna1","Cdh15","Chrng","Myl4","Sox11","Cdkn1c","Fndc5","Myh8"), drawConnectors = T, gridlines.major = F, gridlines.minor = F)
+
+
+##Transfer folder from scratch to pb1lab
+##First login to xfer node!!
+cp -r /scratch/rs14482/workDir/BiLabRNAseq/Fosl1_seq/ /project/pb1lab/
+cp -r /scratch/rs14482/workDir/BiLabRNAseq/Fosl1_data/ /project/pb1lab/
+cp -r /project/pb1lab/BiLabRNAseq/H_hisat2index/ /scratch/rs14482/workDir/BiLabRNAseq/
+
+
+##get bigwig files
+
+#!/bin/bash
+#SBATCH --job-name=j_bigwig
+#SBATCH --mail-type=ALL
+#SBATCH --mail-user=renjieshang@uga.edu
+#SBATCH --ntasks=1
+#SBATCH --partition=highmem_p
+#SBATCH --cpus-per-task=4
+#SBATCH --mem=100gb
+#SBATCH --time=24:00:00
+#SBATCH --output=bigwig.%j.out
+#SBATCH --error=bigwig.%j.err
+cd $SLURM_SUBMIT_DIR
+
+for ((i=1;i<=18;i++));
+do
+module load deepTools/3.5.1-intel-2020b-Python-3.8.6
+
+bamCoverage -b ${i}.sorted.bam -bs 1 -o ${i}.bw
+
+done
