@@ -46,3 +46,50 @@ PC5.2	1	0	0	0	1
 PC5.3	1	0	0	0	1
 
 mageck mle -k Proliferation_count.count.txt -d designmatrix_MLE.txt -n Proliferation_MLE
+
+##plot
+
+library(MAGeCKFlute)
+library(ggplot2)
+library(clusterProfiler)
+library(dplyr)
+file1 = "Library1new47.normalized.DE.gene_summary.txt"
+file2 = "Library1new47.normalized.DE.sgrna_summary.txt"
+gdata = ReadRRA(file1)
+sdata = ReadsgRRA(file2)
+gdata$LogFDR = -log10(gdata$FDR)
+head(sdata)
+head(gdata)
+VolcanoView(gdata, x = "Score", y = "FDR", Label = "id", x_cutoff = 1, y_cutoff = 0.05, top = 14, topnames = c("MYMX1","MYMK1"))
+gdata$Rank = rank(gdata$Score)
+ScatterView(gdata, x = "Rank", y = "Score", label = "id", top = 14, auto_cut_y = TRUE, ylab = "Log2FC", groups = c("top", "bottom"), toplabels = "MYMK1")
+ScatterView(gdata, x = "Rank", y = "Score", label = "id", top = 14, y_cut = 2, ylab = "Log2FC", groups = c("top", "bottom"), toplabels = "MYMK1")
+names(geneList) = gdata$id
+geneList= gdata$Score
+names(geneList) = gdata$id
+RankView(geneList, top = 5, bottom = 10)
+RankView(geneList, top = 5, bottom = 10) + theme_classic()
+sgRankView(sdata, top = 10, bottom = 10)
+genelist = gdata$Score
+names(genelist) = gdata$id
+hgt_up = EnrichAnalyzer(genelist[genelist > 0.5], method = "HGT")
+hgt_down = EnrichAnalyzer(genelist[genelist < -0.5], method = "HGT")
+ort_down = EnrichAnalyzer(genelist[genelist < -0.5], method = "ORT")
+ort_up = EnrichAnalyzer(genelist[genelist > 0.5], method = "ORT")
+gse_up = EnrichAnalyzer(genelist[genelist > 0.5], method = "GSEA")
+gse_down = EnrichAnalyzer(genelist[genelist < -0.5], method = "GSEA")
+barplot(hgt_up, showCategory = 5)
+barplot(hgt_up, showCategory = 10)
+barplot(hgt_down, showCategory = 10)
+dotplot(hgt_up, showCategory = 10)
+dotplot(hgt_down, showCategory = 10)
+hgt_up@result$geneID = hgt_up@result$geneName
+cnetplot(hgt_up, 2)
+cnetplot(hgt_up, 5)
+emapplot(hgt_up, layout="kk")
+gseaplot2(gse_up, geneSetID = 1:5)
+View(ort_down)
+saveRDS("1new47_normalized.Rdata")
+save.image("1new47_normalized.Rdata")
+savehistory("~/Desktop/DataAnalysis/CRISPRscreen/1new47/1new47normalized/1new47.Rhistory")
+
