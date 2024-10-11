@@ -1,0 +1,465 @@
+user@MacBook-Pro brew install gcc
+
+user@MacBook-Pro alias gcc=/opt/homebrew/bin/gcc-10 alias g++=/opt/homebrew/bin/gcc-11
+
+#redo unzip the downloaded mageck source code file
+
+user@MacBook-Pro mageck-0.5.9.4 % cd rra/src   
+
+user@MacBook-Pro src % ls
+
+RRA.cpp		classdef.h	fileio.h	math_api.cpp	rngs.cpp	rvgs.cpp	tags		words.o
+RRA.o		fileio.cpp	fileio.o	math_api.o	rngs.o		rvgs.o		words.cpp
+
+user@MacBook-Pro src % rm *.o
+
+user@MacBook-Pro src % cd ..
+
+user@MacBook-Pro rra % make
+g++ -Wall -g -O2 -I./include -c src/rngs.cpp  -o src/rngs.o
+g++ -Wall -g -O2 -I./include -c src/words.cpp  -o src/words.o
+g++ -Wall -g -O2 -I./include -c src/rvgs.cpp  -o src/rvgs.o
+g++ -Wall -g -O2 -I./include -c src/math_api.cpp  -o src/math_api.o
+g++ -Wall -g -O2 -I./include -c src/fileio.cpp  -o src/fileio.o
+g++ -Wall -g -O2 -I./include -c src/RRA.cpp  -o src/RRA.o
+g++ -Wall -g -O2 -I./include -o ../bin/RRA ./src/rngs.o ./src/words.o ./src/rvgs.o ./src/math_api.o ./src/fileio.o ./src/RRA.o -lm 
+
+user@MacBook-Pro rra % cd ..
+
+user@MacBook-Pro mageck-0.5.9.4 % cd gsea
+
+user@MacBook-Pro gsea % cd src 
+
+user@MacBook-Pro src % pwd
+
+/Users/srj/Desktop/DataAnalysis/CRISPRscreen/mageck-0.5.9.4/gsea/src
+
+user@MacBook-Pro src % rm *.o
+
+user@MacBook-Pro src % cd ..
+
+user@MacBook-Pro gsea % make
+g++ -Wall -g -O3 -I./src -c src/math_api.cpp  -o src/math_api.o
+g++ -Wall -g -O3 -I./src -c src/rvgs.cpp  -o src/rvgs.o
+g++ -Wall -g -O3 -I./src -c src/rngs.cpp  -o src/rngs.o
+g++ -Wall -g -O3 -I./src -c src/calculategsea.cpp  -o src/calculategsea.o
+g++ -Wall -g -O3 -I./src -o ../bin/mageckGSEA ./src/math_api.o ./src/rvgs.o ./src/rngs.o ./src/calculategsea.o  
+
+user@MacBook-Pro gsea % cd ..
+
+user@MacBook-Pro mageck-0.5.9.4 % python3 setup.py install   
+make: Nothing to be done for `all'.
+../bin/RRA - Robust Rank Aggreation v 0.5.9.
+usage:
+-i <input data file>. Format: <item id> <group id> <list id> <value> [<probability>] [<chosen>]
+-o <output file>. Format: <group id> <number of items in the group> <lo-value> <false discovery rate>
+-p <maximum percentile>. RRA only consider the items with percentile smaller than this parameter. Default=0.1
+-P <minimum percentile>. RRA only consider the items with percentile greater than this parameter. Default=-1.0
+--control <control_sgrna list>. A list of control sgRNA names.
+--permutation <int>. The number of rounds of permutation. Increase this value if the number of genes is small. Default 100.
+--no-permutation-by-group. By default, gene permutation is performed separately, by their number of sgRNAs. Turning this option will perform permutation on all genes together. This makes the program faster, but the p value estimation is accurate only if the number of sgRNAs per gene is approximately the same.
+--skip-gene <gene_name>. Genes to skip from doing permutation. Specify it multiple times if you need to skip more than 1 genes.
+--min-percentage-goodsgrna <min percentage>. Filter genes that have too few percentage of 'good sgrnas', or sgrnas that fall below the -p threshold. Must be a number between 0-1. Default 0 (do not filter genes).
+--min-number-goodsgrna <min number>. Filter genes that have too few number of 'good sgrnas', or sgrnas that fall below the -p threshold. Must be an integer. Default 0 (do not filter genes). 
+--max-sgrnapergene-permutation <max number>. Only permute genes by group if the number of sgRNAs per gene is smaller than this number. This will save a lot of time if some regions are targeted by a large number of sgRNAs (usually hundreds). Must be an integer. Default 100. 
+example:
+../bin/RRA -i input.txt -o output.txt -p 0.1 
+make: Nothing to be done for `all'.
+mageckGSEA: A fast implementation of GSEA enrichment test. v0.5.6
+/Users/srj/anaconda3/lib/python3.11/site-packages/setuptools/command/sdist.py:117: SetuptoolsDeprecationWarning: `build_py` command does not inherit from setuptools' `build_py`.
+!!
+
+        ********************************************************************************
+        Custom 'build_py' does not implement 'get_data_files_without_manifest'.
+        Please extend command classes from setuptools instead of distutils.
+
+        See https://peps.python.org/pep-0632/ for details.
+        ********************************************************************************
+
+!!
+  self._add_data_files(self._safe_data_files(build_py))
+
+user@MacBook-Pro mageck-0.5.9.4 % cd bin     
+
+user@MacBook-Pro bin % ls
+RRA		mageck		mageckGSEA
+
+user@MacBook-Pro bin % sudo cp RRA /usr/local/bin/
+Password:
+
+user@MacBook-Pro bin % sudo cp mageckGSEA /usr/local/bin/
+
+user@MacBook-Pro bin % cd ..
+
+user@MacBook-Pro mageck-0.5.9.4 % mageck     
+
+usage: mageck [-h] [-v] {count,test,pathway,plot,mle} ...
+
+mageck: performs sgRNA, gene and pathway analysis on CRISPR-Cas9 screening data.
+
+positional arguments:
+  {count,test,pathway,plot,mle}
+                        commands to run mageck
+    count               Collecting read counts from fastq files.
+    test                Perform statistical test from a given count table (generated by count command).
+    pathway             Perform significant pathway analysis from gene rankings generated by the test command.
+    plot                Generating graphics for selected genes.
+    mle                 Perform MLE estimation of gene essentiality.
+
+options:
+  -h, --help            show this help message and exit
+  -v, --version         show program's version number and exit
+user@MacBook-Pro mageck-0.5.9.4 % mageck
+usage: mageck [-h] [-v] {count,test,pathway,plot,mle} ...
+
+mageck: performs sgRNA, gene and pathway analysis on CRISPR-Cas9 screening data.
+
+positional arguments:
+  {count,test,pathway,plot,mle}
+                        commands to run mageck
+    count               Collecting read counts from fastq files.
+    test                Perform statistical test from a given count table (generated by count command).
+    pathway             Perform significant pathway analysis from gene rankings generated by the test command.
+    plot                Generating graphics for selected genes.
+    mle                 Perform MLE estimation of gene essentiality.
+
+options:
+  -h, --help            show this help message and exit
+  -v, --version         show program's version number and exit
+
+user@MacBook-Pro mageck-0.5.9.4 % brew install numpy --with-python3
+==> Downloading https://formulae.brew.sh/api/formula.jws.json
+#################################################################################################################################### 100.0%
+Usage: brew install [options] formula|cask [...]
+
+Install a formula or cask. Additional options specific to a formula may be
+appended to the command.
+
+Unless HOMEBREW_NO_INSTALLED_DEPENDENTS_CHECK is set, brew upgrade or brew
+reinstall will be run for outdated dependents and dependents with broken
+linkage, respectively.
+
+Unless HOMEBREW_NO_INSTALL_CLEANUP is set, brew cleanup will then be run for
+the installed formulae or, every 30 days, for all formulae.
+
+Unless HOMEBREW_NO_INSTALL_UPGRADE is set, brew install formula will
+upgrade formula if it is already installed but outdated.
+
+  -d, --debug                      If brewing fails, open an interactive
+                                   debugging session with access to IRB or a
+                                   shell inside the temporary build directory.
+      --display-times              Print install times for each package at the
+                                   end of the run.
+  -f, --force                      Install formulae without checking for
+                                   previously installed keg-only or non-migrated
+                                   versions. When installing casks, overwrite
+                                   existing files (binaries and symlinks are
+                                   excluded, unless originally from the same
+                                   cask).
+  -v, --verbose                    Print the verification and post-install
+                                   steps.
+  -n, --dry-run                    Show what would be installed, but do not
+                                   actually install anything.
+      --formula, --formulae        Treat all named arguments as formulae.
+      --ignore-dependencies        An unsupported Homebrew development option to
+                                   skip installing any dependencies of any kind.
+                                   If the dependencies are not already present,
+                                   the formula will have issues. If you're not
+                                   developing Homebrew, consider adjusting your
+                                   PATH rather than using this option.
+      --only-dependencies          Install the dependencies with specified
+                                   options but do not install the formula
+                                   itself.
+      --cc                         Attempt to compile using the specified
+                                   compiler, which should be the name of the
+                                   compiler's executable, e.g. gcc-9 for GCC
+                                   9. In order to use LLVM's clang, specify
+                                   llvm_clang. To use the Apple-provided
+                                   clang, specify clang. This option will only
+                                   accept compilers that are provided by
+                                   Homebrew or bundled with macOS. Please do not
+                                   file issues if you encounter errors while
+                                   using this option.
+  -s, --build-from-source          Compile formula from source even if a
+                                   bottle is provided. Dependencies will still
+                                   be installed from bottles if they are
+                                   available.
+      --force-bottle               Install from a bottle if it exists for the
+                                   current or newest version of macOS, even if
+                                   it would not normally be used for
+                                   installation.
+      --include-test               Install testing dependencies required to run
+                                   brew test formula.
+      --HEAD                       If formula defines it, install the HEAD
+                                   version, aka. main, trunk, unstable, master.
+      --fetch-HEAD                 Fetch the upstream repository to detect if
+                                   the HEAD installation of the formula is
+                                   outdated. Otherwise, the repository's HEAD
+                                   will only be checked for updates when a new
+                                   stable or development version has been
+                                   released.
+      --keep-tmp                   Retain the temporary files created during
+                                   installation.
+      --debug-symbols              Generate debug symbols on build. Source will
+                                   be retained in a cache directory.
+      --build-bottle               Prepare the formula for eventual bottling
+                                   during installation, skipping any
+                                   post-install steps.
+      --skip-post-install          Install but skip any post-install steps.
+      --bottle-arch                Optimise bottles for the specified
+                                   architecture rather than the oldest
+                                   architecture supported by the version of
+                                   macOS the bottles are built on.
+  -i, --interactive                Download and patch formula, then open a
+                                   shell. This allows the user to run
+                                   ./configure --help and otherwise determine
+                                   how to turn the software package into a
+                                   Homebrew package.
+  -g, --git                        Create a Git repository, useful for creating
+                                   patches to the software.
+      --overwrite                  Delete files that already exist in the prefix
+                                   while linking.
+      --cask, --casks              Treat all named arguments as casks.
+      --[no-]binaries              Disable/enable linking of helper executables
+                                   (default: enabled).
+      --require-sha                Require all casks to have a checksum.
+      --[no-]quarantine            Disable/enable quarantining of downloads
+                                   (default: enabled).
+      --adopt                      Adopt existing artifacts in the destination
+                                   that are identical to those being installed.
+                                   Cannot be combined with --force.
+      --skip-cask-deps             Skip installing cask dependencies.
+      --zap                        For use with brew reinstall --cask. Remove
+                                   all files associated with a cask. May remove
+                                   files which are shared between applications.
+      --appdir                     Target location for Applications (default:
+                                   /Applications).
+      --keyboard-layoutdir         Target location for Keyboard Layouts
+                                   (default: /Library/Keyboard Layouts).
+      --colorpickerdir             Target location for Color Pickers (default:
+                                   ~/Library/ColorPickers).
+      --prefpanedir                Target location for Preference Panes
+                                   (default: ~/Library/PreferencePanes).
+      --qlplugindir                Target location for Quick Look Plugins
+                                   (default: ~/Library/QuickLook).
+      --mdimporterdir              Target location for Spotlight Plugins
+                                   (default: ~/Library/Spotlight).
+      --dictionarydir              Target location for Dictionaries (default:
+                                   ~/Library/Dictionaries).
+      --fontdir                    Target location for Fonts (default:
+                                   ~/Library/Fonts).
+      --servicedir                 Target location for Services (default:
+                                   ~/Library/Services).
+      --input-methoddir            Target location for Input Methods (default:
+                                   ~/Library/Input Methods).
+      --internet-plugindir         Target location for Internet Plugins
+                                   (default: ~/Library/Internet Plug-Ins).
+      --audio-unit-plugindir       Target location for Audio Unit Plugins
+                                   (default:
+                                   ~/Library/Audio/Plug-Ins/Components).
+      --vst-plugindir              Target location for VST Plugins (default:
+                                   ~/Library/Audio/Plug-Ins/VST).
+      --vst3-plugindir             Target location for VST3 Plugins (default:
+                                   ~/Library/Audio/Plug-Ins/VST3).
+      --screen-saverdir            Target location for Screen Savers (default:
+                                   ~/Library/Screen Savers).
+      --language                   Comma-separated list of language codes to
+                                   prefer for cask installation. The first
+                                   matching language is used, otherwise it
+                                   reverts to the cask's default language. The
+                                   default value is the language of your system.
+  -q, --quiet                      Make some output more quiet.
+  -h, --help                       Show this message.
+
+user@MacBook-Pro mageck-0.5.9.4 % brew install numpy --with-python 
+Usage: brew install [options] formula|cask [...]
+
+Install a formula or cask. Additional options specific to a formula may be
+appended to the command.
+
+Unless HOMEBREW_NO_INSTALLED_DEPENDENTS_CHECK is set, brew upgrade or brew
+reinstall will be run for outdated dependents and dependents with broken
+linkage, respectively.
+
+Unless HOMEBREW_NO_INSTALL_CLEANUP is set, brew cleanup will then be run for
+the installed formulae or, every 30 days, for all formulae.
+
+Unless HOMEBREW_NO_INSTALL_UPGRADE is set, brew install formula will
+upgrade formula if it is already installed but outdated.
+
+  -d, --debug                      If brewing fails, open an interactive
+                                   debugging session with access to IRB or a
+                                   shell inside the temporary build directory.
+      --display-times              Print install times for each package at the
+                                   end of the run.
+  -f, --force                      Install formulae without checking for
+                                   previously installed keg-only or non-migrated
+                                   versions. When installing casks, overwrite
+                                   existing files (binaries and symlinks are
+                                   excluded, unless originally from the same
+                                   cask).
+  -v, --verbose                    Print the verification and post-install
+                                   steps.
+  -n, --dry-run                    Show what would be installed, but do not
+                                   actually install anything.
+      --formula, --formulae        Treat all named arguments as formulae.
+      --ignore-dependencies        An unsupported Homebrew development option to
+                                   skip installing any dependencies of any kind.
+                                   If the dependencies are not already present,
+                                   the formula will have issues. If you're not
+                                   developing Homebrew, consider adjusting your
+                                   PATH rather than using this option.
+      --only-dependencies          Install the dependencies with specified
+                                   options but do not install the formula
+                                   itself.
+      --cc                         Attempt to compile using the specified
+                                   compiler, which should be the name of the
+                                   compiler's executable, e.g. gcc-9 for GCC
+                                   9. In order to use LLVM's clang, specify
+                                   llvm_clang. To use the Apple-provided
+                                   clang, specify clang. This option will only
+                                   accept compilers that are provided by
+                                   Homebrew or bundled with macOS. Please do not
+                                   file issues if you encounter errors while
+                                   using this option.
+  -s, --build-from-source          Compile formula from source even if a
+                                   bottle is provided. Dependencies will still
+                                   be installed from bottles if they are
+                                   available.
+      --force-bottle               Install from a bottle if it exists for the
+                                   current or newest version of macOS, even if
+                                   it would not normally be used for
+                                   installation.
+      --include-test               Install testing dependencies required to run
+                                   brew test formula.
+      --HEAD                       If formula defines it, install the HEAD
+                                   version, aka. main, trunk, unstable, master.
+      --fetch-HEAD                 Fetch the upstream repository to detect if
+                                   the HEAD installation of the formula is
+                                   outdated. Otherwise, the repository's HEAD
+                                   will only be checked for updates when a new
+                                   stable or development version has been
+                                   released.
+      --keep-tmp                   Retain the temporary files created during
+                                   installation.
+      --debug-symbols              Generate debug symbols on build. Source will
+                                   be retained in a cache directory.
+      --build-bottle               Prepare the formula for eventual bottling
+                                   during installation, skipping any
+                                   post-install steps.
+      --skip-post-install          Install but skip any post-install steps.
+      --bottle-arch                Optimise bottles for the specified
+                                   architecture rather than the oldest
+                                   architecture supported by the version of
+                                   macOS the bottles are built on.
+  -i, --interactive                Download and patch formula, then open a
+                                   shell. This allows the user to run
+                                   ./configure --help and otherwise determine
+                                   how to turn the software package into a
+                                   Homebrew package.
+  -g, --git                        Create a Git repository, useful for creating
+                                   patches to the software.
+      --overwrite                  Delete files that already exist in the prefix
+                                   while linking.
+      --cask, --casks              Treat all named arguments as casks.
+      --[no-]binaries              Disable/enable linking of helper executables
+                                   (default: enabled).
+      --require-sha                Require all casks to have a checksum.
+      --[no-]quarantine            Disable/enable quarantining of downloads
+                                   (default: enabled).
+      --adopt                      Adopt existing artifacts in the destination
+                                   that are identical to those being installed.
+                                   Cannot be combined with --force.
+      --skip-cask-deps             Skip installing cask dependencies.
+      --zap                        For use with brew reinstall --cask. Remove
+                                   all files associated with a cask. May remove
+                                   files which are shared between applications.
+      --appdir                     Target location for Applications (default:
+                                   /Applications).
+      --keyboard-layoutdir         Target location for Keyboard Layouts
+                                   (default: /Library/Keyboard Layouts).
+      --colorpickerdir             Target location for Color Pickers (default:
+                                   ~/Library/ColorPickers).
+      --prefpanedir                Target location for Preference Panes
+                                   (default: ~/Library/PreferencePanes).
+      --qlplugindir                Target location for Quick Look Plugins
+                                   (default: ~/Library/QuickLook).
+      --mdimporterdir              Target location for Spotlight Plugins
+                                   (default: ~/Library/Spotlight).
+      --dictionarydir              Target location for Dictionaries (default:
+                                   ~/Library/Dictionaries).
+      --fontdir                    Target location for Fonts (default:
+                                   ~/Library/Fonts).
+      --servicedir                 Target location for Services (default:
+                                   ~/Library/Services).
+      --input-methoddir            Target location for Input Methods (default:
+                                   ~/Library/Input Methods).
+      --internet-plugindir         Target location for Internet Plugins
+                                   (default: ~/Library/Internet Plug-Ins).
+      --audio-unit-plugindir       Target location for Audio Unit Plugins
+                                   (default:
+                                   ~/Library/Audio/Plug-Ins/Components).
+      --vst-plugindir              Target location for VST Plugins (default:
+                                   ~/Library/Audio/Plug-Ins/VST).
+      --vst3-plugindir             Target location for VST3 Plugins (default:
+                                   ~/Library/Audio/Plug-Ins/VST3).
+      --screen-saverdir            Target location for Screen Savers (default:
+                                   ~/Library/Screen Savers).
+      --language                   Comma-separated list of language codes to
+                                   prefer for cask installation. The first
+                                   matching language is used, otherwise it
+                                   reverts to the cask's default language. The
+                                   default value is the language of your system.
+  -q, --quiet                      Make some output more quiet.
+  -h, --help                       Show this message.
+
+user@MacBook-Pro mageck-0.5.9.4 % brew install numpy
+==> Downloading https://formulae.brew.sh/api/cask.jws.json
+#################################################################################################################################### 100.0%
+Warning: numpy 2.1.2_1 is already installed and up-to-date.
+To reinstall 2.1.2_1, run:
+  brew reinstall numpy
+
+user@MacBook-Pro mageck-0.5.9.4 % pip install scipy
+Requirement already satisfied: scipy in /Users/srj/anaconda3/lib/python3.11/site-packages (1.11.1)
+Requirement already satisfied: numpy<1.28.0,>=1.21.6 in /Users/srj/anaconda3/lib/python3.11/site-packages (from scipy) (1.24.3)
+
+user@MacBook-Pro mageck-0.5.9.4 % mageck     
+usage: mageck [-h] [-v] {count,test,pathway,plot,mle} ...
+
+mageck: performs sgRNA, gene and pathway analysis on CRISPR-Cas9 screening data.
+
+positional arguments:
+  {count,test,pathway,plot,mle}
+                        commands to run mageck
+    count               Collecting read counts from fastq files.
+    test                Perform statistical test from a given count table (generated by count command).
+    pathway             Perform significant pathway analysis from gene rankings generated by the test command.
+    plot                Generating graphics for selected genes.
+    mle                 Perform MLE estimation of gene essentiality.
+
+options:
+  -h, --help            show this help message and exit
+  -v, --version         show program's version number and exit
+
+user@MacBook-Pro mageck-0.5.9.4 % which mageck
+/Users/srj/anaconda3/bin/mageck
+
+user@MacBook-Pro mageck-0.5.9.4 % mageck -h
+
+usage: mageck [-h] [-v] {count,test,pathway,plot,mle} ...
+
+mageck: performs sgRNA, gene and pathway analysis on CRISPR-Cas9 screening data.
+
+positional arguments:
+  {count,test,pathway,plot,mle}
+                        commands to run mageck
+    count               Collecting read counts from fastq files.
+    test                Perform statistical test from a given count table (generated by count command).
+    pathway             Perform significant pathway analysis from gene rankings generated by the test command.
+    plot                Generating graphics for selected genes.
+    mle                 Perform MLE estimation of gene essentiality.
+
+options:
+  -h, --help            show this help message and exit
+  -v, --version         show program's version number and exit
